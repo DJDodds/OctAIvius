@@ -1,0 +1,906 @@
+2025-08-07 17:36:36 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "stack": "Error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:121:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:39:36 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "stack": "Error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:150:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:39:36 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Quota Exceeded: You need to add billing/credits to your OpenAI account. Visit https://platform.openai.com/account/billing to add payment method.",
+    "stack": "Error: ❌ OpenAI Quota Exceeded: You need to add billing/credits to your OpenAI account. Visit https://platform.openai.com/account/billing to add payment method.\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:54:54 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "stack": "Error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:183:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:54:54 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Quota Exceeded: You need to add billing/credits to your OpenAI account. Visit https://platform.openai.com/account/billing to add payment method.",
+    "stack": "Error: ❌ OpenAI Quota Exceeded: You need to add billing/credits to your OpenAI account. Visit https://platform.openai.com/account/billing to add payment method.\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:55:01 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "stack": "Error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:183:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:55:01 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Quota Exceeded: You need to add billing/credits to your OpenAI account. Visit https://platform.openai.com/account/billing to add payment method.",
+    "stack": "Error: ❌ OpenAI Quota Exceeded: You need to add billing/credits to your OpenAI account. Visit https://platform.openai.com/account/billing to add payment method.\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:57:52 [ERROR]: ❌ Raw error object:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "TypeError",
+    "message": "Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "TypeError: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at webidl.converters.ByteString (node:internal/deps/undici/undici:3889:17)\n    at _Headers.append (node:internal/deps/undici/undici:8861:35)\n    at buildHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\internal\\headers.js:65:31)\n    at OpenAI.authHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:147:43)\n    at OpenAI.buildHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:451:24)\n    at OpenAI.buildRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:420:39)\n    at OpenAI.makeRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:216:50)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:141:34)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37"
+  }
+}
+2025-08-07 17:57:52 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:186:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:57:52 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "Error: ❌ OpenAI Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:57:57 [ERROR]: ❌ Raw error object:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "TypeError",
+    "message": "Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "TypeError: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at webidl.converters.ByteString (node:internal/deps/undici/undici:3889:17)\n    at _Headers.append (node:internal/deps/undici/undici:8861:35)\n    at buildHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\internal\\headers.js:65:31)\n    at OpenAI.authHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:147:43)\n    at OpenAI.buildHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:451:24)\n    at OpenAI.buildRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:420:39)\n    at OpenAI.makeRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:216:50)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:141:34)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37"
+  }
+}
+2025-08-07 17:57:57 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:186:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:57:57 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "Error: ❌ OpenAI Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:57:58 [ERROR]: ❌ Raw error object:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "TypeError",
+    "message": "Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "TypeError: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at webidl.converters.ByteString (node:internal/deps/undici/undici:3889:17)\n    at _Headers.append (node:internal/deps/undici/undici:8861:35)\n    at buildHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\internal\\headers.js:65:31)\n    at OpenAI.authHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:147:43)\n    at OpenAI.buildHeaders (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:451:24)\n    at OpenAI.buildRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:420:39)\n    at OpenAI.makeRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:216:50)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:141:34)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37"
+  }
+}
+2025-08-07 17:57:58 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:186:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:57:58 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.",
+    "stack": "Error: ❌ OpenAI Error: Cannot convert argument to a ByteString because the character at index 69 has a value of 10060 which is greater than 255.\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:58:17 [ERROR]: ❌ Raw error object:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "stack": "Error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.\n    at APIError.generate (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\core\\error.js:63:20)\n    at OpenAI.makeStatusError (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:159:32)\n    at OpenAI.makeRequest (C:\\Users\\DXD07081\\Stash\\GVAIBot\\node_modules\\openai\\client.js:304:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:141:34)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:58:17 [ERROR]: ❌ Connection test failed for openai:
+{
+  "correlationId": "AIService",
+  "error": {
+    "name": "Error",
+    "message": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.",
+    "stack": "Error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.\n    at AIService.testConnection (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\aiService.js:186:76)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:37\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-07 17:58:17 [ERROR]: Error code: insufficient_quota
+{
+  "correlationId": "AIService"
+}
+2025-08-07 17:58:17 [ERROR]: ❌ Error testing openai connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "❌ OpenAI Quota Issue: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.. Check your billing at https://platform.openai.com/account/billing",
+    "stack": "Error: ❌ OpenAI Quota Issue: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.. Check your billing at https://platform.openai.com/account/billing\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:166:73\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 16:49:31 [ERROR]: ❌ Error stopping voice recording:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "No recording in progress",
+    "stack": "Error: No recording in progress\n    at VoiceService.stopRecording (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:61:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:223:55\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-08 16:56:19 [ERROR]: ❌ Error stopping voice recording:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "No recording in progress",
+    "stack": "Error: No recording in progress\n    at VoiceService.stopRecording (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:133:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:223:55\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-08 16:56:30 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:151:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 16:56:30 [ERROR]: Error processing audio:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:160:58)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 16:56:30 [ERROR]: ❌ Error processing voice audio:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:151:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 16:56:38 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:151:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 16:56:38 [ERROR]: Error processing audio:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:160:58)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 16:56:38 [ERROR]: ❌ Error processing voice audio:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:151:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 17:01:33 [ERROR]: ❌ Error stopping voice recording:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "No recording in progress",
+    "stack": "Error: No recording in progress\n    at VoiceService.stopRecording (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:133:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:223:55\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-08 17:01:43 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:152:28)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-08 17:25:09 [ERROR]: ❌ Error stopping voice recording:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "No recording in progress",
+    "stack": "Error: No recording in progress\n    at VoiceService.stopRecording (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:133:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:223:55\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-08 17:25:19 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:152:28)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:201:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-11 17:44:08 [ERROR]: 💥 Unhandled Rejection
+{
+  "correlationId": "Main"
+}
+2025-08-11 17:44:56 [ERROR]: 💥 Unhandled Rejection
+{
+  "correlationId": "Main"
+}
+2025-08-11 17:47:20 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:286:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-11 17:47:23 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:286:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-11 17:47:30 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:286:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-11 17:47:50 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:286:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-11 17:47:52 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:286:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-11 17:50:58 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:293:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-11 17:51:57 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "spawn EINVAL",
+    "stack": "Error: spawn EINVAL\n    at ChildProcess.spawn (node:internal/child_process:420:11)\n    at spawn (node:child_process:769:9)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:281:51\n    at new Promise (<anonymous>)\n    at MCPChild.start (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:275:16)\n    at MCPService.connectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:123:25)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:292:34\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-11 17:57:09 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "spawn EINVAL",
+    "stack": "Error: spawn EINVAL\n    at ChildProcess.spawn (node:internal/child_process:420:11)\n    at spawn (node:child_process:769:9)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:281:51\n    at new Promise (<anonymous>)\n    at MCPChild.start (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:275:16)\n    at MCPService.connectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:123:25)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:292:34\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-11 18:01:15 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:298:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-11 18:17:12 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:298:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-11 18:17:17 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:298:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-11 18:17:17 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:298:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-11 18:17:17 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:298:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-12 10:07:34 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:314:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 10:07:39 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:314:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 10:07:40 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:314:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 10:07:41 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:314:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 10:09:54 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:314:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 10:09:59 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:311:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-12 10:10:11 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:314:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 10:14:51 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:311:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-12 10:17:50 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:311:53)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-12 10:20:05 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:307:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:25:33 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:307:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:15 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:19 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:22 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:25 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:29 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:32 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:36 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:39 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:42 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:46 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:49 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:53 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:31:56 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:00 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:03 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:07 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:10 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:13 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:17 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:20 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:23 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:27 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:30 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:34 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:37 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 10:32:41 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 12:09:21 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:309:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 12:26:58 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:321:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 12:27:10 [ERROR]: Restart failed for clipplayer
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "process exited",
+    "stack": "Error: process exited\n    at ChildProcess.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:321:37)\n    at Object.onceWrapper (node:events:633:26)\n    at ChildProcess.emit (node:events:518:28)\n    at ChildProcess._handle.onexit (node:internal/child_process:293:12)"
+  }
+}
+2025-08-12 12:48:47 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at loop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:368:28)"
+  }
+}
+2025-08-12 12:55:20 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at loop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:368:28)"
+  }
+}
+2025-08-12 12:55:20 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:339:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 12:56:32 [ERROR]: ❌ Error connecting to MCP server:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at loop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:368:28)"
+  }
+}
+2025-08-12 12:56:32 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server clipplayer is not connected",
+    "stack": "Error: Server clipplayer is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:264:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:339:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-12 17:47:52 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"SERVICE_DISABLED\",\n        \"domain\": \"googleapis.com\",\n        \"metadata\": {\n          \"serviceTitle\": \"Cloud Speech-to-Text API\",\n          \"containerInfo\": \"857969558425\",\n          \"service\": \"speech.googleapis.com\",\n          \"consumer\": \"projects/857969558425\",\n          \"activationUrl\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n        }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n        \"locale\": \"en-US\",\n        \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Google developers console API activation\",\n            \"url\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+    "stack": "Error: Speech API error: 403 Forbidden {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"SERVICE_DISABLED\",\n        \"domain\": \"googleapis.com\",\n        \"metadata\": {\n          \"serviceTitle\": \"Cloud Speech-to-Text API\",\n          \"containerInfo\": \"857969558425\",\n          \"service\": \"speech.googleapis.com\",\n          \"consumer\": \"projects/857969558425\",\n          \"activationUrl\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n        }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n        \"locale\": \"en-US\",\n        \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Google developers console API activation\",\n            \"url\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n          }\n        ]\n      }\n    ]\n  }\n}\n\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:154:28)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-12 17:48:06 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"SERVICE_DISABLED\",\n        \"domain\": \"googleapis.com\",\n        \"metadata\": {\n          \"consumer\": \"projects/857969558425\",\n          \"serviceTitle\": \"Cloud Speech-to-Text API\",\n          \"activationUrl\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\",\n          \"service\": \"speech.googleapis.com\",\n          \"containerInfo\": \"857969558425\"\n        }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n        \"locale\": \"en-US\",\n        \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Google developers console API activation\",\n            \"url\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+    "stack": "Error: Speech API error: 403 Forbidden {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"SERVICE_DISABLED\",\n        \"domain\": \"googleapis.com\",\n        \"metadata\": {\n          \"consumer\": \"projects/857969558425\",\n          \"serviceTitle\": \"Cloud Speech-to-Text API\",\n          \"activationUrl\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\",\n          \"service\": \"speech.googleapis.com\",\n          \"containerInfo\": \"857969558425\"\n        }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n        \"locale\": \"en-US\",\n        \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Google developers console API activation\",\n            \"url\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n          }\n        ]\n      }\n    ]\n  }\n}\n\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:154:28)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-12 17:48:16 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"SERVICE_DISABLED\",\n        \"domain\": \"googleapis.com\",\n        \"metadata\": {\n          \"containerInfo\": \"857969558425\",\n          \"activationUrl\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\",\n          \"serviceTitle\": \"Cloud Speech-to-Text API\",\n          \"consumer\": \"projects/857969558425\",\n          \"service\": \"speech.googleapis.com\"\n        }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n        \"locale\": \"en-US\",\n        \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Google developers console API activation\",\n            \"url\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n          }\n        ]\n      }\n    ]\n  }\n}\n",
+    "stack": "Error: Speech API error: 403 Forbidden {\n  \"error\": {\n    \"code\": 403,\n    \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\",\n    \"status\": \"PERMISSION_DENIED\",\n    \"details\": [\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\",\n        \"reason\": \"SERVICE_DISABLED\",\n        \"domain\": \"googleapis.com\",\n        \"metadata\": {\n          \"containerInfo\": \"857969558425\",\n          \"activationUrl\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\",\n          \"serviceTitle\": \"Cloud Speech-to-Text API\",\n          \"consumer\": \"projects/857969558425\",\n          \"service\": \"speech.googleapis.com\"\n        }\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.LocalizedMessage\",\n        \"locale\": \"en-US\",\n        \"message\": \"Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.\"\n      },\n      {\n        \"@type\": \"type.googleapis.com/google.rpc.Help\",\n        \"links\": [\n          {\n            \"description\": \"Google developers console API activation\",\n            \"url\": \"https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425\"\n          }\n        ]\n      }\n    ]\n  }\n}\n\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:97:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:154:28)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-12 17:58:44 [ERROR]: 🎤 Google STT HTTP 403 Forbidden: {
+  "error": {
+    "code": 403,
+    "message": "Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry.",
+    "status": "PERMISSION_DENIED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "SERVICE_DISABLED",
+        "domain": "googleapis.com",
+        "metadata": {
+          "consumer": "projects/857969558425",
+          "serviceTitle": "Cloud Speech-to-Text API",
+          "activationUrl": "https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425",
+          "service": "speech.googleapis.com",
+          "containerInfo": "857969558425"
+        }
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.LocalizedMessage",
+        "locale": "en-US",
+        "message": "Cloud Speech-to-Text API has not been used in project 857969558425 before or it is disabled. Enable it by visiting https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425 then retry. If you enabled this API recently, wait a few minutes for the action to propagate to our systems and retry."
+      },
+      {
+        "@type": "type.googleapis.com/google.rpc.Help",
+        "links": [
+          {
+            "description": "Google developers console API activation",
+            "url": "https://console.developers.google.com/apis/api/speech.googleapis.com/overview?project=857969558425"
+          }
+        ]
+      }
+    ]
+  }
+}
+
+{
+  "correlationId": "VoiceService"
+}
+2025-08-12 17:58:44 [ERROR]: 🎤 Error processing audio to text:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:139:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:186:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-12 17:58:44 [ERROR]: 🎤 STT failed:
+{
+  "correlationId": "VoiceService",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:193:49)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}
+2025-08-12 17:58:44 [ERROR]: ❌ Error processing voice audio:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Speech API error: 403 Forbidden",
+    "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:139:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:186:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
+  }
+}

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>AI Chatbot with Voice & MCP Integration</title>
+    <meta name="description" content="Advanced AI chatbot with voice dictation and Model Context Protocol integration">
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:;">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/css/main.css">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/js/app.js" as="script">
+    <link rel="preload" href="/js/socket.js" as="script">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="spinner"></div>
+        <p>Loading AI Chatbot...</p>
+    </div>
+
+    <!-- Main Application Container -->
+    <div id="app" class="app-container" style="display: none;">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="icon">🤖</span>
+                    AI Chatbot
+                </h1>
+                
+                <div class="header-controls">
+                    <!-- Voice Toggle -->
+                    <button id="voice-toggle" class="control-btn" title="Toggle Voice Input">
+                        <span class="icon">🎤</span>
+                    </button>
+                    
+                    <!-- Settings -->
+                    <button id="settings-btn" class="control-btn" title="Settings">
+                        <span class="icon">⚙️</span>
+                    </button>
+                    
+                    <!-- Connection Status -->
+                    <div id="connection-status" class="connection-status">
+                        <span class="status-indicator disconnected"></span>
+                        <span class="status-text">Connecting...</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Chat Container -->
+            <div class="chat-container">
+                <!-- Messages Area -->
+                <div id="messages" class="messages-area">
+                    <!-- Welcome Message -->
+                    <div class="message system-message">
+                        <div class="message-content">
+                            <h3>Welcome to AI Chatbot! 👋</h3>
+                            <p>I'm your intelligent assistant with voice capabilities and advanced function calling. Here's what I can do:</p>
+                            <ul>
+                                <li>💬 Text-based conversations with advanced AI</li>
+                                <li>🎤 Voice input and transcription</li>
+                                <li>🔧 Execute system functions and integrations</li>
+                                <li>📡 Connect to MCP (Model Context Protocol) servers</li>
+                                <li>📊 Real-time data processing and analysis</li>
+                            </ul>
+                            <p>Try typing a message or click the microphone to start talking!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div id="typing-indicator" class="typing-indicator" style="display: none;">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                    <span class="typing-text">AI is thinking...</span>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="input-area">
+                <!-- Voice Recording Indicator -->
+                <div id="voice-recording" class="voice-recording" style="display: none;">
+                    <div class="recording-indicator">
+                        <div class="pulse"></div>
+                        <span class="recording-text">Listening...</span>
+                    </div>
+                    <button id="stop-recording" class="stop-recording-btn">Stop</button>
+                </div>
+
+                <!-- Message Input Form -->
+                <form id="message-form" class="message-form">
+                    <div class="input-container">
+                        <textarea
+                            id="message-input"
+                            class="message-input"
+                            placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+                            rows="1"
+                            maxlength="4000"
+                        ></textarea>
+                        
+                        <div class="input-controls">
+                            <!-- Voice Input Button -->
+                            <button
+                                type="button"
+                                id="voice-input-btn"
+                                class="voice-input-btn"
+                                title="Voice Input (Click and hold to record)"
+                            >
+                                <span class="icon">🎤</span>
+                            </button>
+                            
+                            <!-- File Upload Button -->
+                            <button
+                                type="button"
+                                id="file-upload-btn"
+                                class="file-upload-btn"
+                                title="Upload Audio File"
+                            >
+                                <span class="icon">📁</span>
+                            </button>
+                            
+                            <!-- Send Button -->
+                            <button
+                                type="submit"
+                                id="send-btn"
+                                class="send-btn"
+                                title="Send Message (Enter)"
+                            >
+                                <span class="icon">➤</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Character Counter -->
+                    <div class="input-footer">
+                        <span id="char-counter" class="char-counter">0 / 4000</span>
+                    </div>
+                </form>
+
+                <!-- Hidden File Input -->
+                <input
+                    type="file"
+                    id="audio-file-input"
+                    accept="audio/wav,audio/mp3,audio/ogg,audio/webm"
+                    style="display: none;"
+                >
+            </div>
+        </main>
+
+        <!-- Side Panel (Hidden by default) -->
+        <aside id="side-panel" class="side-panel" style="display: none;">
+            <div class="panel-header">
+                <h3 id="panel-title">Settings</h3>
+                <button id="close-panel" class="close-panel-btn">✕</button>
+            </div>
+            
+            <div class="panel-content">
+                <!-- Settings Content -->
+                <div id="settings-content" class="settings-content">
+                    <div class="setting-group">
+                        <h4>Voice Settings</h4>
+                        <label class="setting-item">
+                            <input type="checkbox" id="auto-play-voice" checked>
+                            <span>Auto-play voice responses</span>
+                        </label>
+                        <label class="setting-item">
+                            <span>Speech Rate</span>
+                            <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1">
+                        </label>
+                        <label class="setting-item">
+                            <span>Speech Pitch</span>
+                            <input type="range" id="speech-pitch" min="0" max="2" step="0.1" value="1">
+                        </label>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <h4>Interface</h4>
+                        <label class="setting-item">
+                            <span>Theme</span>
+                            <select id="theme-select">
+                                <option value="auto">Auto</option>
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                            </select>
+                        </label>
+                    </div>
+                    
+                    <div class="setting-group">
+                        <h4>Advanced</h4>
+                        <label class="setting-item">
+                            <input type="checkbox" id="debug-mode">
+                            <span>Debug Mode</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Error Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/config.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/audio.js"></script>
+    <script src="/js/socket.js"></script>
+    <script src="/js/ui.js"></script>
+    <script src="/js/app.js"></script>
+
+    <!-- Performance and Analytics (if needed) -->
+    <script>
+        // Basic performance monitoring
+        window.addEventListener('load', () => {
+            if ('performance' in window) {
+                const perfData = performance.getEntriesByType('navigation')[0];
+                console.log('Page load time:', perfData.loadEventEnd - perfData.loadEventStart, 'ms');
+            }
+        });
+
+        // Basic error tracking
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            // In production, you might want to send this to an error tracking service
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            // In production, you might want to send this to an error tracking service
+        });
+    </script>
+</body>
+</html>
