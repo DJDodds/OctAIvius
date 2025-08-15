@@ -248,7 +248,7 @@ class GVAIBotApp {
     });
 
     // Chat handler using AI service
-    ipcMain.handle("chat:send-message", async (event, message: string) => {
+  ipcMain.handle("chat:send-message", async (event, message: string) => {
       try {
         logger.info("💬 Processing chat message:", message);
 
@@ -300,11 +300,35 @@ class GVAIBotApp {
           return { success: true, response: text };
         };
 
+        // Helper: MCP guidance if user intent mentions AMPP/ClipPlayer but no specific pattern matched
+        const mcpGuidance = async () => {
+          try {
+            await ensureServer(serverId);
+            // Best-effort: warm tools list (ignoring errors)
+            try {
+              await mcpService.listTools(serverId);
+            } catch {}
+          } catch {}
+          const guidance = [
+            "I can help with AMPP and Clip Player controls. Try:",
+            "- list all application types",
+            "- get the schemas for <app>",
+            "- list the commands for <app>",
+            "- show the schema for <app>.<command>",
+            "- suggest a payload for <app>.<command>",
+            "- list workloads for <app>",
+            "- set clipplayer workload to <workloadId>",
+            "- play | pause | seek 100 | set rate 2 | shuttle -4",
+          ].join("\n");
+          return { success: true, response: guidance };
+        };
+
         // AMPP schema and commands
         let m;
         if (
           (m = message.match(/get (?:me )?(?:the )?schemas for\s+([\w.-]+)/i))
         ) {
+          logger.info("🧩 NL route -> ampp_list_commands_for_application", { app: m[1] });
           const app = m[1];
           try {
             await ensureServer(serverId);
@@ -319,6 +343,7 @@ class GVAIBotApp {
           });
         }
         if ((m = message.match(/list (?:the )?commands for\s+([\w.-]+)/i))) {
+          logger.info("🧩 NL route -> ampp_list_commands_for_application", { app: m[1] });
           return await call("ampp_list_commands_for_application", {
             applicationType: m[1],
           });
@@ -326,6 +351,7 @@ class GVAIBotApp {
         if (
           (m = message.match(/show (?:the )?schema for\s+([\w.-]+)\.(\w+)/i))
         ) {
+          logger.info("🧩 NL route -> ampp_show_command_schema", { app: m[1], command: m[2] });
           return await call("ampp_show_command_schema", {
             applicationType: m[1],
             command: m[2],
@@ -334,27 +360,34 @@ class GVAIBotApp {
         if (
           (m = message.match(/suggest (?:a )?payload for\s+([\w.-]+)\.(\w+)/i))
         ) {
+          logger.info("🧩 NL route -> ampp_suggest_payload", { app: m[1], command: m[2] });
           return await call("ampp_suggest_payload", {
             applicationType: m[1],
             command: m[2],
           });
         }
         if (/^list (?:all )?application types/i.test(message)) {
+          logger.info("🧩 NL route -> ampp_list_application_types");
           return await call("ampp_list_application_types");
         }
         if ((m = message.match(/list (?:all )?workloads for\s+([\w.-]+)/i))) {
+          logger.info("🧩 NL route -> ampp_list_workloads", { app: m[1] });
           return await call("ampp_list_workloads", { applicationType: m[1] });
         }
         if (/list (?:all )?workloads\b/i.test(message)) {
+          logger.info("🧩 NL route -> ampp_list_all_workloads");
           return await call("ampp_list_all_workloads");
         }
         if (/list (?:all )?clip ?players/i.test(message)) {
+          logger.info("🧩 NL route -> ampp_list_clip_players");
           return await call("ampp_list_clip_players");
         }
         if ((m = message.match(/set clipplayer workload to\s+([\w-]+)/i))) {
+          logger.info("🧩 NL route -> set_clipplayer_workload", { workloadId: m[1] });
           return await call("set_clipplayer_workload", { workloadId: m[1] });
         }
         if (/get clipplayer workload/i.test(message)) {
+          logger.info("🧩 NL route -> get_clipplayer_workload");
           return await call("get_clipplayer_workload");
         }
         if (
@@ -362,12 +395,14 @@ class GVAIBotApp {
             /set active workload for\s+([\w.-]+)\s+to\s+([\w-]+)/i
           ))
         ) {
+          logger.info("🧩 NL route -> set_active_workload", { app: m[1], workloadId: m[2] });
           return await call("set_active_workload", {
             applicationType: m[1],
             workloadId: m[2],
           });
         }
         if ((m = message.match(/get active workload for\s+([\w.-]+)/i))) {
+          logger.info("🧩 NL route -> get_active_workload", { app: m[1] });
           return await call("get_active_workload", { applicationType: m[1] });
         }
         if (
@@ -379,6 +414,7 @@ class GVAIBotApp {
             cmd = m[2];
           const { obj, error } = extractJson(m[0]);
           if (error) return { success: true, response: error };
+          logger.info("🧩 NL route -> ampp_invoke", { app, command: cmd });
           return await call("ampp_invoke", {
             applicationType: app,
             command: cmd,
@@ -391,6 +427,7 @@ class GVAIBotApp {
           ))
         ) {
           const { obj } = extractJson(message);
+          logger.info("🧩 NL route -> ampp_send_control_message", { workloadId: m[1], app: m[2], schema: m[3] });
           return await call("ampp_send_control_message", {
             workloadId: m[1],
             applicationType: m[2],
@@ -399,9 +436,11 @@ class GVAIBotApp {
           });
         }
         if ((m = message.match(/get ampp state for\s+([\w-]+)/i))) {
+          logger.info("🧩 NL route -> ampp_get_state", { workloadId: m[1] });
           return await call("ampp_get_state", { workloadId: m[1] });
         }
         if (/list macros/i.test(message)) {
+          logger.info("🧩 NL route -> ampp_list_macros");
           return await call("ampp_list_macros");
         }
         if ((m = message.match(/execute macro\s+(.+)/i))) {
@@ -409,6 +448,7 @@ class GVAIBotApp {
           if (!name) {
             return { success: true, response: "Please provide a macro name." };
           }
+          logger.info("🧩 NL route -> ampp_execute_macro_by_name", { name });
           return await call("ampp_execute_macro_by_name", { name });
         }
 
@@ -488,6 +528,12 @@ class GVAIBotApp {
         }
         if ((m = message.match(/set state to\s*(play|pause)/i))) {
           return await call("transport_state", { state: m[1] });
+        }
+
+        // If message looks MCP-related but didn't match a specific pattern, provide guidance
+        if (/(\bampp\b|clip ?player|workload|schema|schemas|macro|transport|play\b|pause\b|seek\b|rate\b|shuttle\b)/i.test(message)) {
+          logger.info("ℹ️ MCP intent detected but no specific NL pattern matched; returning guidance.");
+          return await mcpGuidance();
         }
 
         // Get AI response (default)
