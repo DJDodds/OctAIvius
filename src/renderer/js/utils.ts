@@ -12,7 +12,9 @@ export function getElementById(id: string): HTMLElement | null {
 }
 
 export function getElementsByClassName(className: string): HTMLElement[] {
-  return Array.from(document.getElementsByClassName(className)) as HTMLElement[];
+  return Array.from(
+    document.getElementsByClassName(className)
+  ) as HTMLElement[];
 }
 
 type ElementContent = string | HTMLElement | HTMLElement[];
@@ -61,7 +63,10 @@ export function addEventListenerSafe(
           console.error(`Error in ${event} handler:`, error);
           if ((window as any).AppConfig?.debug?.enabled) {
             if ((window as any).Utils?.showToast) {
-              (window as any).Utils.showToast("error", `Event handler error: ${error.message}`);
+              (window as any).Utils.showToast(
+                "error",
+                `Event handler error: ${error.message}`
+              );
             }
           }
         }
@@ -92,7 +97,11 @@ export function escapeHtml(str: string): string {
   return str.replace(/[&<>"'/]/g, (char) => htmlEscapeMap[char] || char);
 }
 
-export function truncateString(str: string, maxLength: number, suffix = "..."): string {
+export function truncateString(
+  str: string,
+  maxLength: number,
+  suffix = "..."
+): string {
   if (str.length <= maxLength) return str;
   return str.substring(0, Math.max(0, maxLength - suffix.length)) + suffix;
 }
@@ -109,13 +118,21 @@ export function formatTimestamp(
   const date = new Date(timestamp);
   const now = new Date();
   const diff = now.getTime() - date.getTime();
-  const { showDate = true, showTime = true, relative = false, format = "short" } = options;
+  const {
+    showDate = true,
+    showTime = true,
+    relative = false,
+    format = "short",
+  } = options;
   if (relative && diff < 24 * 60 * 60 * 1000) {
     if (diff < 60 * 1000) return "Just now";
     if (diff < 60 * 60 * 1000) return `${Math.floor(diff / (60 * 1000))}m ago`;
     return `${Math.floor(diff / (60 * 60 * 1000))}h ago`;
   }
-  const timeOptions: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
+  const timeOptions: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+  };
   const dateOptions: Intl.DateTimeFormatOptions = {
     month: format === "long" ? "long" : "short",
     day: "numeric",
@@ -145,8 +162,12 @@ export function validateFile(
   options: { allowedTypes?: string[]; maxSize?: number } = {}
 ): { valid: boolean; errors: string[] } {
   const {
-    allowedTypes = (window as any).getConfig?.("voice.supportedFormats", []) || [],
-    maxSize = (window as any).getConfig?.("voice.maxFileSize", 10 * 1024 * 1024) || 10 * 1024 * 1024,
+    allowedTypes = (window as any).getConfig?.("voice.supportedFormats", []) ||
+      [],
+    maxSize = (window as any).getConfig?.(
+      "voice.maxFileSize",
+      10 * 1024 * 1024
+    ) || 10 * 1024 * 1024,
   } = options;
   const errors: string[] = [];
   if (allowedTypes.length > 0 && !allowedTypes.includes(file.type)) {
@@ -154,7 +175,9 @@ export function validateFile(
   }
   if (file.size > maxSize) {
     errors.push(
-      `File size ${formatFileSize(file.size)} exceeds maximum of ${formatFileSize(maxSize)}`
+      `File size ${formatFileSize(
+        file.size
+      )} exceeds maximum of ${formatFileSize(maxSize)}`
     );
   }
   return { valid: errors.length === 0, errors };
@@ -176,7 +199,11 @@ export function scrollToBottom(element: HTMLElement, duration = 300): void {
   requestAnimationFrame(animate);
 }
 
-export function animateOpacity(element: HTMLElement, targetOpacity: number, duration = 300): Promise<void> {
+export function animateOpacity(
+  element: HTMLElement,
+  targetOpacity: number,
+  duration = 300
+): Promise<void> {
   return new Promise((resolve) => {
     const startOpacity = parseFloat(getComputedStyle(element).opacity);
     const distance = targetOpacity - startOpacity;
@@ -193,10 +220,16 @@ export function animateOpacity(element: HTMLElement, targetOpacity: number, dura
 }
 
 // Toasts
-export function showToast(type: "success" | "error" | "warning" | "info", message: string, duration: number | null = null) {
+export function showToast(
+  type: "success" | "error" | "warning" | "info",
+  message: string,
+  duration: number | null = null
+) {
   const container = getElementById("toast-container");
   if (!container) return;
-  const toastDuration = duration ?? ((window as any).getConfig?.("ui.toast.duration", 5000) || 5000);
+  const toastDuration =
+    duration ??
+    ((window as any).getConfig?.("ui.toast.duration", 5000) || 5000);
   const maxToasts = (window as any).getConfig?.("ui.toast.maxToasts", 5) || 5;
   while (container.children.length >= maxToasts) {
     const first = container.firstElementChild;
@@ -206,21 +239,33 @@ export function showToast(type: "success" | "error" | "warning" | "info", messag
       break;
     }
   }
-  const toast = createElement("div", { className: `toast ${type}`, "data-type": type });
+  const toast = createElement("div", {
+    className: `toast ${type}`,
+    "data-type": type,
+  });
   const content = createElement("div", { className: "toast-content" }, message);
-  const closeBtn = createElement("button", { className: "toast-close", "aria-label": "Close notification" }, "×");
+  const closeBtn = createElement(
+    "button",
+    { className: "toast-close", "aria-label": "Close notification" },
+    "×"
+  );
   toast.appendChild(content);
   toast.appendChild(closeBtn);
   container.appendChild(toast);
   const closeToast = () => {
-    animateOpacity(toast, 0, 200).then(() => toast.parentNode?.removeChild(toast));
+    animateOpacity(toast, 0, 200).then(() =>
+      toast.parentNode?.removeChild(toast)
+    );
   };
   addEventListenerSafe(closeBtn, "click", closeToast);
   if (toastDuration > 0) setTimeout(closeToast, toastDuration);
 }
 
 // Storage
-export function getStorageItem<T = any>(key: string, defaultValue: T | null = null): T | null {
+export function getStorageItem<T = any>(
+  key: string,
+  defaultValue: T | null = null
+): T | null {
   try {
     const item = localStorage.getItem(key);
     return item ? (JSON.parse(item) as T) : defaultValue;
@@ -251,7 +296,11 @@ export function removeStorageItem(key: string): boolean {
 }
 
 // Debounce & Throttle
-export function debounce<T extends (...args: any[]) => any>(func: T, wait: number, immediate = false) {
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number,
+  immediate = false
+) {
   let timeout: any;
   return function (this: any, ...args: Parameters<T>) {
     const later = () => {
@@ -265,7 +314,10 @@ export function debounce<T extends (...args: any[]) => any>(func: T, wait: numbe
   };
 }
 
-export function throttle<T extends (...args: any[]) => any>(func: T, limit: number) {
+export function throttle<T extends (...args: any[]) => any>(
+  func: T,
+  limit: number
+) {
   let inThrottle = false;
   return function (this: any, ...args: Parameters<T>) {
     if (!inThrottle) {
@@ -294,7 +346,9 @@ export function isTouchDevice(): boolean {
 }
 
 export function isMobileDevice(): boolean {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
 }
 
 export function getBrowserInfo() {
@@ -306,12 +360,20 @@ export function getBrowserInfo() {
     edge: /Edge/i.test(ua),
     opera: /Opera/i.test(ua),
   } as const;
-  const browser = (Object.keys(browsers) as Array<keyof typeof browsers>).find((k) => (browsers as any)[k]) || "unknown";
-  return { name: browser, userAgent: ua, isMobile: isMobileDevice(), isTouch: isTouchDevice() };
+  const browser =
+    (Object.keys(browsers) as Array<keyof typeof browsers>).find(
+      (k) => (browsers as any)[k]
+    ) || "unknown";
+  return {
+    name: browser,
+    userAgent: ua,
+    isMobile: isMobileDevice(),
+    isTouch: isTouchDevice(),
+  };
 }
 
 // Expose to global for legacy inline scripts
-;(window as any).Utils = {
+(window as any).Utils = {
   getElementById,
   getElementsByClassName,
   createElement,

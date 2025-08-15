@@ -1,8 +1,10 @@
 import React from "react";
+import OctaiviusIcon from "../assets/Octaivius.svg";
 
 interface HeaderProps {
   isConnected: boolean;
   isVoiceEnabled: boolean;
+  isMcpLoading?: boolean;
   onVoiceToggle: () => void;
   onSettingsToggle: () => void;
   onClearChat: () => void;
@@ -13,6 +15,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({
   isConnected,
   isVoiceEnabled,
+  isMcpLoading,
   onVoiceToggle,
   onSettingsToggle,
   onClearChat,
@@ -20,13 +23,16 @@ const Header: React.FC<HeaderProps> = ({
   isMCPPanelOpen,
 }) => {
   return (
-    <header className="app-header">
+    <header className="app-header draggable">
       <div className="header-content">
         <div className="header-left">
-          <h1 className="app-title">
-            <span className="icon">🤖</span>
-            OctAIvius
-          </h1>
+          <img
+            src={OctaiviusIcon}
+            alt="OctAIvius"
+            width={75}
+            height={75}
+            style={{ display: "block" }}
+          />
           <div
             className={`connection-status ${
               isConnected ? "connected" : "disconnected"
@@ -35,9 +41,37 @@ const Header: React.FC<HeaderProps> = ({
             <span className="status-dot"></span>
             {isConnected ? "Connected" : "Disconnected"}
           </div>
+          {typeof isMcpLoading === "boolean" && (
+            <div
+              className={`connection-status no-drag ${
+                isMcpLoading ? "connecting" : "connected"
+              }`}
+              style={{ marginLeft: 8, cursor: "pointer" }}
+              title={
+                isMcpLoading
+                  ? "Bootstrapping schemas and loading tools"
+                  : "Open MCP panel"
+              }
+              role="button"
+              aria-label={
+                isMcpLoading ? "MCP loading status" : "Open MCP panel"
+              }
+              tabIndex={0}
+              onClick={onMCPToggle}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onMCPToggle();
+                }
+              }}
+            >
+              <span className="status-dot"></span>
+              {isMcpLoading ? "MCP loading…" : "MCP ready"}
+            </div>
+          )}
         </div>
 
-        <div className="header-controls">
+        <div className="header-controls no-drag">
           <button
             className={`control-btn voice-btn ${
               isVoiceEnabled ? "active" : ""
@@ -70,6 +104,16 @@ const Header: React.FC<HeaderProps> = ({
             title="MCP Servers"
           >
             <span className="icon">🧩</span>
+          </button>
+
+          {/* Close button for frameless window */}
+          <button
+            className="control-btn"
+            onClick={() => window.electronAPI.windowCtrl.close()}
+            title="Close"
+            aria-label="Close window"
+          >
+            <span className="icon">✖️</span>
           </button>
         </div>
       </div>

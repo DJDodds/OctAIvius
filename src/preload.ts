@@ -47,6 +47,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getConfig: () => ipcRenderer.invoke("app:get-config"),
   },
 
+  // Window controls
+  windowCtrl: {
+    close: () => ipcRenderer.invoke("window:close"),
+  },
+
   // Voice operations
   voice: {
     processAudio: (audioData: ArrayBuffer) =>
@@ -68,6 +73,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("mcp:register-process-server", cfg),
     listTools: (serverId: string) =>
       ipcRenderer.invoke("mcp:list-tools", serverId),
+    bootstrapSchemas: (serverId: string) =>
+      ipcRenderer.invoke("mcp:bootstrap-schemas", serverId),
     onServersUpdated: (
       handler: (evt: { serverId: string; status: string }) => void
     ) => {
@@ -143,6 +150,7 @@ declare global {
         disconnectServer: (serverId: string) => Promise<any>;
         registerProcessServer: (cfg: any) => Promise<any>;
         listTools: (serverId: string) => Promise<any>;
+        bootstrapSchemas: (serverId: string) => Promise<any>;
         onServersUpdated: (
           handler: (evt: { serverId: string; status: string }) => void
         ) => () => void;
@@ -153,6 +161,9 @@ declare global {
           config?: any;
           error?: string;
         }>;
+      };
+      windowCtrl: {
+        close: () => Promise<{ success: boolean; error?: string }>;
       };
       platform: {
         isMac: boolean;

@@ -123,12 +123,15 @@ const defaultConfig: AppConfigShape = {
     soundEnabled: true,
   },
   errors: {
-    network: "Network connection failed. Please check your internet connection.",
+    network:
+      "Network connection failed. Please check your internet connection.",
     server: "Server error occurred. Please try again later.",
-    microphone: "Microphone access denied. Please enable microphone permissions.",
+    microphone:
+      "Microphone access denied. Please enable microphone permissions.",
     audio: "Audio processing failed. Please try again.",
     fileSize: "File size too large. Maximum size is 10MB.",
-    fileType: "Unsupported file type. Please upload WAV, MP3, OGG, or WebM files.",
+    fileType:
+      "Unsupported file type. Please upload WAV, MP3, OGG, or WebM files.",
     timeout: "Request timed out. Please try again.",
     unknown: "An unexpected error occurred. Please try again.",
   },
@@ -162,7 +165,10 @@ if (!(window as any).AppConfig) {
 }
 
 // getConfig helper
-;(window as any).getConfig = function getConfig(path: string, defaultValue: any = null) {
+(window as any).getConfig = function getConfig(
+  path: string,
+  defaultValue: any = null
+) {
   const keys = String(path || "").split(".");
   let current: any = (window as any).AppConfig;
   for (const key of keys) {
@@ -176,7 +182,10 @@ if (!(window as any).AppConfig) {
 };
 
 // setConfig helper
-;(window as any).setConfig = function setConfig(path: string, value: any): boolean {
+(window as any).setConfig = function setConfig(
+  path: string,
+  value: any
+): boolean {
   const keys = String(path || "").split(".");
   const lastKey = keys.pop();
   let current: any = (window as any).AppConfig;
@@ -197,7 +206,7 @@ if (!(window as any).AppConfig) {
 };
 
 // Save user settings
-;(window as any).saveUserSettings = function saveUserSettings(): boolean {
+(window as any).saveUserSettings = function saveUserSettings(): boolean {
   try {
     localStorage.setItem(
       "ai-chatbot-settings",
@@ -238,7 +247,10 @@ function initializeTheme() {
     .matchMedia("(prefers-color-scheme: dark)")
     .addEventListener("change", (e) => {
       if ((window as any).AppConfig.userSettings?.theme === "auto") {
-        document.documentElement.setAttribute("data-theme", e.matches ? "dark" : "light");
+        document.documentElement.setAttribute(
+          "data-theme",
+          e.matches ? "dark" : "light"
+        );
       }
     });
 }
@@ -261,7 +273,7 @@ window.addEventListener("DOMContentLoaded", () => {
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   if (typeof module !== "undefined" && (module as any).exports) {
-    ;(module as any).exports = (window as any).AppConfig;
+    (module as any).exports = (window as any).AppConfig;
   }
 } catch {}
 

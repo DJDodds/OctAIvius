@@ -7,12 +7,14 @@ import { config } from "../config";
 import { Logger } from "../utils/logger";
 import * as fs from "fs";
 import * as path from "path";
+import { GoogleSTT } from "./voice/sttGoogle";
 
 export class VoiceService {
   private logger: Logger;
   private isRecording: boolean = false;
   private recordingData: Buffer[] = [];
   private speechClient: any = null;
+  private googleStt = new GoogleSTT(new Logger("VoiceService:GoogleSTT"));
 
   constructor() {
     this.logger = new Logger("VoiceService");
@@ -28,7 +30,9 @@ export class VoiceService {
     try {
       const len = audioBuffer?.length ?? 0;
       this.logger.info(
-        `🎧 Audio diagnostics: size=${len} bytes (~${Math.round(len / 1024)} KB)`
+        `🎧 Audio diagnostics: size=${len} bytes (~${Math.round(
+          len / 1024
+        )} KB)`
       );
       if (!len) {
         this.logger.warn("🎧 Empty audio buffer received");
@@ -40,7 +44,8 @@ export class VoiceService {
       const hex4 = header4.toString("hex").toUpperCase();
 
       let container = "unknown";
-      if (hex4 === "1A45DFA3") container = "webm/matroska (EBML)"; // EBML header
+      if (hex4 === "1A45DFA3")
+        container = "webm/matroska (EBML)"; // EBML header
       else if (ascii4 === "OggS") container = "ogg";
       else if (ascii4 === "RIFF") {
         const wave = audioBuffer.slice(8, 12).toString("ascii");
@@ -81,12 +86,17 @@ export class VoiceService {
       if (apiKey) {
         await import("@google-cloud/speech");
         // Using REST with API key
-        this.logger.info("🎤 Speech-to-Text client configured with API key (REST)");
+        this.logger.info(
+          "🎤 Speech-to-Text client configured with API key (REST)"
+        );
       } else {
         this.logger.warn("🎤 No Google API key found for speech-to-text");
       }
     } catch (error) {
-      this.logger.error("🎤 Failed to initialize speech client:", error as Error);
+      this.logger.error(
+        "🎤 Failed to initialize speech client:",
+        error as Error
+      );
     }
   }
 
@@ -95,53 +105,16 @@ export class VoiceService {
    */
   async processAudioToText(audioBuffer: Buffer): Promise<string> {
     try {
-      const apiKey = config.ai.provider === "gemini" ? config.ai.apiKey : null;
-      if (!apiKey) {
-        throw new Error("No Google API key available for speech-to-text");
-      }
-
       this.logger.info("🎤 Processing audio to text (Google STT, WEBM_OPUS)");
-
-      // Convert audio buffer to base64
-      const audioBase64 = audioBuffer.toString("base64");
-      const { default: fetch } = await import("node-fetch");
-
-      // For WEBM_OPUS, let Google infer sampleRate
-      const body: any = {
-        config: {
-          encoding: "WEBM_OPUS",
-          languageCode: "en-US",
-          enableAutomaticPunctuation: true,
-        },
-        audio: { content: audioBase64 },
-      };
-
-      const response = await fetch(
-        `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!response.ok) {
-        const t = await response.text();
-        // Log full text to help diagnose encoding/container issues
-        this.logger.error(`🎤 Google STT HTTP ${response.status} ${response.statusText}: ${t}`);
-        throw new Error(`Speech API error: ${response.status} ${response.statusText}`);
-      }
-
-      const result = await response.json();
-
-      if (result.results && result.results.length > 0 && result.results[0].alternatives) {
-        const transcript = result.results[0].alternatives[0].transcript;
-        this.logger.info("🎤 Speech transcript:", transcript);
-        return transcript;
+      const transcript = await this.googleStt.recognizeWebmOpus(audioBuffer);
+      if (!transcript) {
+        this.logger.warn(
+          "🎤 No speech detected in audio (Google response contained no alternatives)"
+        );
       } else {
-        this.logger.warn("🎤 No speech detected in audio (Google response contained no alternatives)");
-        return "";
+        this.logger.info("🎤 Speech transcript:", transcript);
       }
+      return transcript;
     } catch (error) {
       this.logger.error("🎤 Error processing audio to text:", error as Error);
       throw error;
@@ -172,7 +145,9 @@ export class VoiceService {
     this.logger.info("Stopping audio recording...");
     this.isRecording = false;
 
-    throw new Error("Recording pipeline not implemented in main process; renderer mic capture is used in MVP.");
+    throw new Error(
+      "Recording pipeline not implemented in main process; renderer mic capture is used in MVP."
+    );
   }
 
   /**
@@ -186,9 +161,12 @@ export class VoiceService {
         return await this.processAudioToText(audioBuffer);
       }
       // No configured STT provider
-      throw new Error("Speech-to-Text not configured: set a valid Google API key or switch provider.");
+      throw new Error(
+        "Speech-to-Text not configured: set a valid Google API key or switch provider."
+      );
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error("🎤 STT failed:", new Error(errorMessage));
       // Do not return mock transcripts; propagate error so UI can display it
       throw error;
@@ -233,7 +211,8 @@ export class VoiceService {
       this.logger.info("Audio file saved:", filePath);
       return filePath;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
       this.logger.error("Error saving audio file:", new Error(errorMessage));
       throw error;
     }

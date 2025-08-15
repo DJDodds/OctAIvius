@@ -35,13 +35,18 @@ const mcpService = new MCPService();
   try {
     dotenv.config({ path: path.join(clipRoot, ".env") });
   } catch {}
-  // Prefer compiled JS server to ensure stdio passthrough; fallback to npm start if not built.
-  const builtJs = path.join(clipRoot, "out", "ClipPlayerMCPServer.js");
+  // Prefer compiled JS entry to ensure clean stdio; fallback to npm start if not built.
+  const builtEntry = path.join(clipRoot, "out", "index.js");
   let command: string;
   let args: string[];
-  // For stability, run via npm start (ts-node path) so the server stays alive and uses stderr for logs.
-  command = process.platform === "win32" ? "npm.cmd" : "npm";
-  args = ["run", "start", "--silent"]; // server must not print to stdout
+  if (fs.existsSync(builtEntry)) {
+    command = process.platform === "win32" ? "node.exe" : "node"; // run with Node, not Electron
+    args = [builtEntry];
+  } else {
+    // Fallback: run via npm start (ts-node). Note: npm may interfere with stdio; build project to prefer direct node when possible.
+    command = process.platform === "win32" ? "npm.cmd" : "npm";
+    args = ["run", "start", "--silent"]; // server must not print to stdout
+  }
 
   // Build an env map for the child process (only include set values)
   const clipEnv: NodeJS.ProcessEnv = {};
@@ -149,6 +154,10 @@ class GVAIBotApp {
       height: 800,
       minWidth: 800,
       minHeight: 600,
+      // Frameless window (custom header)
+      frame: false,
+      // Hide the default menu bar for a more app-like look
+      autoHideMenuBar: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -187,6 +196,28 @@ class GVAIBotApp {
       if (config.server.environment === "development") {
         this.mainWindow?.webContents.openDevTools();
       }
+
+      // Auto-connect to the ClipPlayer MCP server on first window ready
+      (async () => {
+        try {
+          logger.info("🛰️ Auto-connecting to MCP server: clipplayer");
+          await mcpService.connectServer("clipplayer");
+          // Warm the tools list
+          try {
+            await mcpService.listTools("clipplayer");
+          } catch {}
+          this.broadcastMcpServersUpdated({
+            serverId: "clipplayer",
+            status: "connected",
+          });
+        } catch (e) {
+          logger.warn("⚠️ Auto-connect failed for clipplayer", e as any);
+          this.broadcastMcpServersUpdated({
+            serverId: "clipplayer",
+            status: "error",
+          });
+        }
+      })();
     });
 
     // Handle window closed
@@ -200,7 +231,21 @@ class GVAIBotApp {
    * Setup IPC (Inter-Process Communication) handlers
    */
   private setupIPC(): void {
+    const broadcast = (payload: { serverId: string; status: string }) =>
+      this.broadcastMcpServersUpdated(payload);
     logger.info("🔗 Setting up IPC handlers...");
+
+    // Window controls
+    ipcMain.handle("window:close", async () => {
+      try {
+        const win = BrowserWindow.getFocusedWindow() || this.mainWindow;
+        win?.close();
+        return { success: true };
+      } catch (error: any) {
+        logger.error("❌ Error closing window:", error);
+        return { success: false, error: error?.message || "Unknown error" };
+      }
+    });
 
     // Chat handler using AI service
     ipcMain.handle("chat:send-message", async (event, message: string) => {
@@ -216,7 +261,236 @@ class GVAIBotApp {
           timestamp: new Date(),
         };
 
-        // Get AI response
+        // Try broader NL intent routing for MCP (no slash required)
+        const ensureServer = async (serverId: string) => {
+          try {
+            if (!mcpService.isServerConnected(serverId)) {
+              await mcpService.connectServer(serverId);
+            }
+          } catch (e) {
+            logger.error("Failed to ensure MCP connection:", e as any);
+          }
+        };
+
+        const serverId = "clipplayer";
+
+        // Extract a JSON object (if present) from the message
+        const extractJson = (s: string): { obj?: any; error?: string } => {
+          const start = s.indexOf("{");
+          const end = s.lastIndexOf("}");
+          if (start >= 0 && end > start) {
+            const json = s.slice(start, end + 1);
+            try {
+              return { obj: JSON.parse(json) };
+            } catch (e: any) {
+              return { error: "Invalid JSON payload" };
+            }
+          }
+          return {};
+        };
+
+        // Helper to call MCP and normalize text return
+        const call = async (tool: string, args: any = {}) => {
+          await ensureServer(serverId);
+          const res = await mcpService.callFunction(serverId, tool, args);
+          const text =
+            typeof res?.content?.[0]?.text === "string"
+              ? res.content[0].text
+              : JSON.stringify(res);
+          return { success: true, response: text };
+        };
+
+        // AMPP schema and commands
+        let m;
+        if (
+          (m = message.match(/get (?:me )?(?:the )?schemas for\s+([\w.-]+)/i))
+        ) {
+          const app = m[1];
+          try {
+            await ensureServer(serverId);
+            await mcpService.callFunction(
+              serverId,
+              "ampp_refresh_application_schemas",
+              {}
+            );
+          } catch {}
+          return await call("ampp_list_commands_for_application", {
+            applicationType: app,
+          });
+        }
+        if ((m = message.match(/list (?:the )?commands for\s+([\w.-]+)/i))) {
+          return await call("ampp_list_commands_for_application", {
+            applicationType: m[1],
+          });
+        }
+        if (
+          (m = message.match(/show (?:the )?schema for\s+([\w.-]+)\.(\w+)/i))
+        ) {
+          return await call("ampp_show_command_schema", {
+            applicationType: m[1],
+            command: m[2],
+          });
+        }
+        if (
+          (m = message.match(/suggest (?:a )?payload for\s+([\w.-]+)\.(\w+)/i))
+        ) {
+          return await call("ampp_suggest_payload", {
+            applicationType: m[1],
+            command: m[2],
+          });
+        }
+        if (/^list (?:all )?application types/i.test(message)) {
+          return await call("ampp_list_application_types");
+        }
+        if ((m = message.match(/list (?:all )?workloads for\s+([\w.-]+)/i))) {
+          return await call("ampp_list_workloads", { applicationType: m[1] });
+        }
+        if (/list (?:all )?workloads\b/i.test(message)) {
+          return await call("ampp_list_all_workloads");
+        }
+        if (/list (?:all )?clip ?players/i.test(message)) {
+          return await call("ampp_list_clip_players");
+        }
+        if ((m = message.match(/set clipplayer workload to\s+([\w-]+)/i))) {
+          return await call("set_clipplayer_workload", { workloadId: m[1] });
+        }
+        if (/get clipplayer workload/i.test(message)) {
+          return await call("get_clipplayer_workload");
+        }
+        if (
+          (m = message.match(
+            /set active workload for\s+([\w.-]+)\s+to\s+([\w-]+)/i
+          ))
+        ) {
+          return await call("set_active_workload", {
+            applicationType: m[1],
+            workloadId: m[2],
+          });
+        }
+        if ((m = message.match(/get active workload for\s+([\w.-]+)/i))) {
+          return await call("get_active_workload", { applicationType: m[1] });
+        }
+        if (
+          (m = message.match(
+            /invoke\s+([\w.-]+)\.(\w+)\s+(?:with )?({[\s\S]*})/i
+          ))
+        ) {
+          const app = m[1],
+            cmd = m[2];
+          const { obj, error } = extractJson(m[0]);
+          if (error) return { success: true, response: error };
+          return await call("ampp_invoke", {
+            applicationType: app,
+            command: cmd,
+            payload: obj || {},
+          });
+        }
+        if (
+          (m = message.match(
+            /send control message .*?workload\s+([\w-]+).*?app(?:lication)?\s+([\w.-]+).*?(?:schema|command)\s+(\w+)/i
+          ))
+        ) {
+          const { obj } = extractJson(message);
+          return await call("ampp_send_control_message", {
+            workloadId: m[1],
+            applicationType: m[2],
+            schema: m[3],
+            payload: obj || {},
+          });
+        }
+        if ((m = message.match(/get ampp state for\s+([\w-]+)/i))) {
+          return await call("ampp_get_state", { workloadId: m[1] });
+        }
+        if (/list macros/i.test(message)) {
+          return await call("ampp_list_macros");
+        }
+        if ((m = message.match(/execute macro\s+(.+)/i))) {
+          const name = m && m[1] ? m[1].trim() : "";
+          if (!name) {
+            return { success: true, response: "Please provide a macro name." };
+          }
+          return await call("ampp_execute_macro_by_name", { name });
+        }
+
+        // ClipPlayer controls
+        if (
+          (m = message.match(
+            /load clip(?:\s+(?:file|from file)\s+(.+)|\s+id\s+([\w-]+)|\s+(.+))/i
+          ))
+        ) {
+          const file = (m[1] || m[3] || "").trim();
+          const clipId = m[2];
+          const args = clipId ? { clipId } : file ? { file } : {};
+          return await call("load_clip", args);
+        }
+        if (/^(?:play|pause)\b/i.test(message)) {
+          return await call("play_pause");
+        }
+        if ((m = message.match(/seek (?:to )?(?:frame )?(\d+)/i))) {
+          return await call("seek", { frame: Number(m[1]) });
+        }
+        if (
+          (m = message.match(
+            /(?:set )?(?:rate|speed|playback rate) (?:to )?(-?\d+(?:\.\d+)?)/i
+          ))
+        ) {
+          return await call("set_rate", { rate: Number(m[1]) });
+        }
+        if (/go to start|^start$/i.test(message)) {
+          return await call("goto_start");
+        }
+        if (/go to end|^end$/i.test(message)) {
+          return await call("goto_end");
+        }
+        if (/step forward/i.test(message)) {
+          return await call("step_forward");
+        }
+        if (/step back|step backward/i.test(message)) {
+          return await call("step_back");
+        }
+        if (/mark in/i.test(message)) {
+          return await call("mark_in");
+        }
+        if (/mark out/i.test(message)) {
+          return await call("mark_out");
+        }
+        if (/fast ?forward/i.test(message)) {
+          return await call("fast_forward");
+        }
+        if (/rewind/i.test(message)) {
+          return await call("rewind");
+        }
+        if (/^loop\b|toggle loop/i.test(message)) {
+          return await call("loop");
+        }
+        if ((m = message.match(/shuttle (?:at|to)?\s*(-?\d+(?:\.\d+)?)/i))) {
+          return await call("shuttle", { rate: Number(m[1]) });
+        }
+        if (/get state/i.test(message)) {
+          return await call("get_state");
+        }
+        if (/clear assets/i.test(message)) {
+          return await call("clear_assets");
+        }
+        if (
+          (m = message.match(
+            /set transport (?:(?:position|pos)\s*(\d+))?(?:.*?in\s*(\d+))?(?:.*?out\s*(\d+))?(?:.*?rate\s*(-?\d+(?:\.\d+)?))?(?:.*?(loop|repeat|recue))?/i
+          ))
+        ) {
+          const [, pos, inPos, outPos, rate, endb] = m;
+          const args: any = {};
+          if (pos) args.position = Number(pos);
+          if (inPos) args.inPosition = Number(inPos);
+          if (outPos) args.outPosition = Number(outPos);
+          if (rate) args.rate = Number(rate);
+          if (endb) args.endBehaviour = endb as any;
+          return await call("transport_command", args);
+        }
+        if ((m = message.match(/set state to\s*(play|pause)/i))) {
+          return await call("transport_state", { state: m[1] });
+        }
+
+        // Get AI response (default)
         const response = await aiService.processMessage(message);
         logger.info("🤖 AI response generated successfully");
 
@@ -344,9 +618,11 @@ class GVAIBotApp {
       try {
         logger.info("🔗 Connecting to MCP server:", serverId);
         await mcpService.connectServer(serverId);
+        broadcast({ serverId, status: "connected" });
         return { success: true };
       } catch (error: any) {
         logger.error("❌ Error connecting to MCP server:", error);
+        broadcast({ serverId, status: "error" });
         return { success: false, error: error?.message || "Unknown error" };
       }
     });
@@ -380,14 +656,30 @@ class GVAIBotApp {
       }
     });
 
+    // Optional: explicit schema bootstrap from renderer
+    ipcMain.handle("mcp:bootstrap-schemas", async (_e, serverId: string) => {
+      try {
+        logger.info(
+          `🧩 Bootstrapping schemas for ${serverId} (renderer request)`
+        );
+        await (mcpService as any).bootstrapSchemas?.(serverId);
+        return { success: true };
+      } catch (error: any) {
+        logger.error("❌ Error bootstrapping schemas:", error);
+        return { success: false, error: error?.message || "Unknown error" };
+      }
+    });
+
     // Disconnect a server
     ipcMain.handle("mcp:disconnect-server", async (_e, serverId: string) => {
       try {
         logger.info("🔌 Disconnecting MCP server:", serverId);
         await mcpService.disconnectServer(serverId);
+        broadcast({ serverId, status: "disconnected" });
         return { success: true };
       } catch (error: any) {
         logger.error("❌ Error disconnecting MCP server:", error);
+        broadcast({ serverId, status: "error" });
         return { success: false, error: error?.message || "Unknown error" };
       }
     });
@@ -557,6 +849,20 @@ class GVAIBotApp {
     logger.info("✅ IPC handlers setup completed");
   }
 
+  // Notify renderer(s) that MCP servers changed status
+  private broadcastMcpServersUpdated(payload: {
+    serverId: string;
+    status: string;
+  }) {
+    try {
+      BrowserWindow.getAllWindows().forEach((w) => {
+        w.webContents.send("mcp:servers-updated", payload);
+      });
+    } catch (e) {
+      logger.warn("Failed to broadcast mcp:servers-updated", e as any);
+    }
+  }
+
   /**
    * Cleanup services on app shutdown
    */
@@ -576,49 +882,10 @@ class GVAIBotApp {
    * Setup basic application menu
    */
   private setupMenu(): void {
-    const template: Electron.MenuItemConstructorOptions[] = [
-      {
-        label: "File",
-        submenu: [
-          {
-            label: "New Chat",
-            accelerator: "CmdOrCtrl+N",
-            click: () => {
-              this.mainWindow?.webContents.send("chat:new");
-            },
-          },
-          { type: "separator" },
-          { role: "quit" },
-        ],
-      },
-      {
-        label: "Edit",
-        submenu: [
-          { role: "undo" },
-          { role: "redo" },
-          { type: "separator" },
-          { role: "cut" },
-          { role: "copy" },
-          { role: "paste" },
-          { role: "selectAll" },
-        ],
-      },
-      {
-        label: "View",
-        submenu: [
-          { role: "reload" },
-          { role: "forceReload" },
-          { role: "toggleDevTools" },
-          { type: "separator" },
-          { role: "togglefullscreen" },
-        ],
-      },
-    ];
-
-    const menu = Menu.buildFromTemplate(template);
-    Menu.setApplicationMenu(menu);
-
-    logger.info("✅ Application menu setup completed");
+    // Remove the application menu entirely for a clean, app-like UI.
+    // Note: Standard OS shortcuts (e.g., Ctrl+X/C/V) still work.
+    Menu.setApplicationMenu(null);
+    logger.info("✅ Application menu removed (clean UI mode)");
   }
 }
 

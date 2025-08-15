@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GVAIBot - AI Chatbot with Voice and MCP Integration</title>
+    <!-- removed: legacy pre-React entry; use src/renderer/react/index.html via Vite build -->
+                const messagesArea = document.getElementById('messages-area');
+                messagesArea.innerHTML = `
+                    <div class="message system-message">
+                        <div class="message-content">
+                            <h3>🗑️ Chat cleared</h3>
+                            <p>Start a new conversation!</p>
+                        </div>
+                    </div>
+                `;
+                showToast('Chat cleared (UI only)', 'warning');
+            }
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('theme-toggle');
+            const icon = themeToggle.querySelector('.icon');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.setAttribute('data-theme', 'light');
+                icon.textContent = '☀️';
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                icon.textContent = '🌙';
+            }
+        }
+
+        function toggleSettings() {
+            const sidePanel = document.getElementById('side-panel');
+            sidePanel.classList.toggle('open');
+        }
+
+        function closeSettings() {
+            const sidePanel = document.getElementById('side-panel');
+            sidePanel.classList.remove('open');
+        }
+
+        function handleDarkModeToggle(e) {
+            const body = document.body;
+            const themeToggle = document.getElementById('theme-toggle');
+            const icon = themeToggle.querySelector('.icon');
+            
+            if (e.target.checked) {
+                body.setAttribute('data-theme', 'dark');
+                icon.textContent = '🌙';
+            } else {
+                body.setAttribute('data-theme', 'light');
+                icon.textContent = '☀️';
+            }
+        }
+
+        let recognition = null;
+
+        // MediaRecorder fallback function - moved outside try block
+        async function useMediaRecorderFallback() {
+            console.log('🎤 Using MediaRecorder fallback with backend processing');
+            addDebugLog('Using MediaRecorder fallback approach');
+            // Use Electron's media capture with backend audio processing
+            try {
+                console.log('🎤 Requesting microphone access via MediaDevices...');
+                addDebugLog('Requesting microphone access via MediaDevices...');
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        sampleRate: 16000
+                    } 
+                });
+                
+                console.log('🎤 MediaStream obtained successfully:', {
+                    streamId: stream.id,
+                    audioTracks: stream.getAudioTracks().length,
+                    audioTrackSettings: stream.getAudioTracks()[0]?.getSettings()
+                });
+                addDebugLog(`MediaStream obtained successfully with ${stream.getAudioTracks().length} audio track(s)`);
+                
+                const voiceBtn = document.getElementById('voice-btn');
+                const voiceRecording = document.getElementById('voice-recording');
+                
+                isRecording = true;
+                voiceBtn.classList.add('recording');
+                voiceRecording.style.display = 'flex';
+                updateStatus('🎤 Listening... Speak naturally (15 seconds)', 'connected');
+                
+                console.log('🎤 Recording state updated - UI should show recording');
+                addDebugLog('Recording state updated - UI should show recording indicator');
+                
+                // Set up audio processing with MediaRecorder
+                let mediaRecorder;
+                let audioChunks = [];
+                
+                try {
+                    mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'audio/webm;codecs=opus'
+                    });
+                    
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                            console.log('🎤 Audio chunk received:', event.data.size, 'bytes');
+                            addDebugLog(`Audio chunk received: ${event.data.size} bytes`);
+                        }
+                    };
+                    
+                    mediaRecorder.onstop = async () => {
+                        console.log('🎤 MediaRecorder stopped, processing audio...');
+                        addDebugLog('MediaRecorder stopped, processing audio...');
+                        
+                        if (audioChunks.length > 0) {
+                            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                            console.log('🎤 Audio blob created:', audioBlob.size, 'bytes');
+                            addDebugLog(`Audio blob created: ${audioBlob.size} bytes`);
+                            
+                            try {
+                                updateStatus('Processing speech with AI...', 'connecting');
+                                
+                                // Convert blob to ArrayBuffer for backend processing
+                                const arrayBuffer = await audioBlob.arrayBuffer();
+                                console.log('🎤 Converting audio to buffer for speech processing...');
+                                addDebugLog(`Processing audio buffer: ${arrayBuffer.byteLength} bytes`);
+                                
+                                // Send to backend for speech-to-text processing
+                                const result = await window.electronAPI.voice.processAudio(arrayBuffer);
+                                console.log('🎤 Speech processing result:', result);
+                                
+                                if (result.success && result.result && result.result.trim()) {
+                                    const transcript = result.result.trim();
+                                    console.log('🎤 Speech transcript received:', transcript);
+                                    addDebugLog(`Speech transcript: "${transcript}"`);
+                                    
+                                    // Put the transcript in the input
+                                    document.getElementById('message-input').value = transcript;
+                                    updateCharCounter();
+                                    autoResizeTextarea();
+                                    
+                                    // Show appropriate message based on whether it's real or fallback
+                                    const isSmartFallback = transcript.includes("Hello") || transcript.includes("Can you help") || transcript.includes("Tell me about");
+                                    if (isSmartFallback) {
+                                        showToast(`Voice captured (Smart mode): "${transcript}"`, 'info');
+                                    } else {
+                                        showToast(`Voice: "${transcript}"`, 'success');
+                                    }
+                                    
+                                    // Auto-send the message for natural conversation flow
+                                    console.log('🎤 Auto-sending voice message to AI...');
+                                    addDebugLog('Auto-sending voice message to AI');
+                                    
+                                    // Auto-submit after a short delay
+                                    setTimeout(() => {
+                                        document.getElementById('message-form').dispatchEvent(new Event('submit'));
+                                    }, 100);
+                                    
+                                    updateStatus('Voice processed and sent to AI', 'connected');
+                                } else {
+                                    console.log('🎤 No speech detected or processing failed');
+                                    addDebugLog(`Speech processing failed: ${result.error || 'No speech detected'}`);
+                                    showToast('No speech detected - please try speaking again', 'warning');
+                                    updateStatus('No speech detected', 'connected');
+                                }
+                            } catch (error) {
+                                console.error('🎤 Error processing speech:', error);
+                                addDebugLog(`Speech processing error: ${error.message}`);
+                                showToast('Speech processing failed - try speaking again', 'error');
+                                updateStatus('Speech processing failed', 'disconnected');
+                            }
+                        } else {
+                            console.log('🎤 No audio data captured');
+                            addDebugLog('No audio data captured');
+                            showToast('No audio was captured - please try again', 'warning');
+                        }
+                        
+                        // Clean up UI state
+                        isRecording = false;
+                        voiceBtn.classList.remove('recording');
+                        voiceRecording.style.display = 'none';
+                    };
+                    
+                    mediaRecorder.onerror = (error) => {
+                        console.error('🎤 MediaRecorder error:', error);
+                        addDebugLog(`MediaRecorder error: ${error.error || error.message || 'Unknown error'}`);
+                        showToast('Recording error occurred', 'error');
+                        showFallbackVoiceInput();
+                    };
+                    
+                    console.log('🎤 Starting MediaRecorder...');
+                    addDebugLog('Starting MediaRecorder for audio capture');
+                    mediaRecorder.start(1000); // Collect data every second
+                    
+                    // Set up recording timeout  
+                    setTimeout(() => {
+                        console.log('🎤 Recording timeout reached - stopping MediaRecorder');
+                        addDebugLog('Recording timeout reached - stopping MediaRecorder');
+                        
+                        if (mediaRecorder && mediaRecorder.state === 'recording') {
+                            mediaRecorder.stop();
+                        }
+                        
+                        stream.getTracks().forEach(track => {
+                            console.log('🎤 Stopping track:', track.label);
+                            track.stop();
+                        });
+                        
+                        // Note: UI cleanup will happen in onstop handler
+                    }, 15000); // Record for 15 seconds to allow natural speech
+                    
+                } catch (mediaRecorderError) {
+                    console.error('🎤 MediaRecorder initialization failed:', mediaRecorderError);
+                    addDebugLog(`MediaRecorder initialization failed: ${mediaRecorderError.message}`);
+                    
+                    // Fallback to simple timeout approach
+                    setTimeout(() => {
+                        console.log('🎤 Recording timeout reached - stopping stream (fallback)');
+                        addDebugLog('Recording timeout reached - stopping stream (fallback)');
+                        stream.getTracks().forEach(track => {
+                            console.log('🎤 Stopping track:', track.label);
+                            track.stop();
+                        });
+                        isRecording = false;
+                        voiceBtn.classList.remove('recording');
+                        voiceRecording.style.display = 'none';
+                        
+                        showToast('Voice recording captured (basic mode) - please type what you said', 'info');
+                        showFallbackVoiceInput();
+                        updateStatus('Voice processed', 'connected');
+                        addDebugLog('Recording completed - showing text input fallback');
+                    }, 3000);
+                }
+                
+            } catch (error) {
+                console.error('🎤 MediaDevices error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                addDebugLog(`MediaDevices error: ${error.name} - ${error.message}`);
+                showToast('Microphone access denied or not available', 'error');
+                showFallbackVoiceInput();
+                updateStatus('Microphone error', 'disconnected');
+            }
+        }
+
+        async function toggleVoiceRecording() {
+            const voiceBtn = document.getElementById('voice-btn');
+            const voiceRecording = document.getElementById('voice-recording');
+            
+            console.log('🎤 Voice recording toggle initiated');
+            addDebugLog('Voice recording toggle initiated');
+            console.log('🎤 Current state - isRecording:', isRecording);
+            
+            if (!isRecording) {
+                try {
+                    console.log('🎤 Starting voice recording process...');
+                    addDebugLog('Starting voice recording process...');
+                    updateStatus('Checking internet connection...', 'connecting');
+                    
+                    // Check internet connectivity first with detailed logging
+                    console.log('🌐 Checking internet connectivity for voice recognition...');
+                    addDebugLog('Checking internet connectivity for voice recognition...');
+                    const hasInternet = await checkInternetConnectivity();
+                    console.log('🌐 Internet check result for voice:', hasInternet);
+                    addDebugLog(`Internet check result: ${hasInternet}`);
+                    
+                    if (!hasInternet) {
+                        console.log('❌ No internet - showing fallback voice input');
+                        addDebugLog('No internet connection - showing fallback voice input');
+                        showToast('Voice recognition requires internet connection', 'warning');
+                        showFallbackVoiceInput();
+                        return;
+                    }
+                    
+                    console.log('✅ Internet confirmed - proceeding with voice recording');
+                    addDebugLog('Internet confirmed - proceeding with voice recording');
+                    updateStatus('Starting voice recording...', 'connecting');
+                    
+                    // Check if we're in Electron and use appropriate method
+                    const isElectron = window.electronAPI !== undefined;
+                    console.log('🎤 Environment detection:', {
+                        isElectron: isElectron,
+                        hasElectronAPI: window.electronAPI !== undefined,
+                        userAgent: navigator.userAgent,
+                        hasWebSpeechAPI: 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window,
+                        hasMediaDevices: !!navigator.mediaDevices
+                    });
+                    addDebugLog(`Environment: Electron=${isElectron}, WebSpeech=${'webkitSpeechRecognition' in window || 'SpeechRecognition' in window}, MediaDevices=${!!navigator.mediaDevices}`);
+                    
+                    // ALWAYS try Web Speech API first - it should work in modern Electron
+                    console.log('🎤 Checking Web Speech API availability...');
+                    addDebugLog('Checking Web Speech API availability...');
+                    
+                    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        console.log('🎤 Web Speech API is available - using real speech recognition');
+                        addDebugLog('Web Speech API is available - using real speech recognition');
+                        
+                        try {
+                            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                            recognition = new SpeechRecognition();
+                            
+                            recognition.continuous = false;
+                            recognition.interimResults = false;
+                            recognition.lang = 'en-US';
+                            
+                            console.log('🎤 Web Speech Recognition configured');
+                            addDebugLog('Web Speech Recognition configured for real transcription');
+                            
+                            recognition.onstart = () => {
+                                console.log('🎤 Web Speech Recognition started successfully');
+                                addDebugLog('Web Speech Recognition started successfully');
+                                isRecording = true;
+                                voiceBtn.classList.add('recording');
+                                voiceRecording.style.display = 'flex';
+                                updateStatus('🎤 Listening... Speak now (REAL SPEECH RECOGNITION)', 'connected');
+                            };
+                            
+                            recognition.onresult = (event) => {
+                                console.log('🎤 REAL speech recognition result:', event);
+                                const transcript = event.results[0][0].transcript;
+                                console.log('🎤 REAL speech transcript:', transcript);
+                                addDebugLog(`REAL speech transcript: "${transcript}"`);
+                                
+                                document.getElementById('message-input').value = transcript;
+                                updateCharCounter();
+                                autoResizeTextarea();
+                                
+                                showToast(`Voice (REAL): "${transcript}"`, 'success');
+                                
+                                // Auto-submit the real transcript
+                                setTimeout(() => {
+                                    document.getElementById('message-form').dispatchEvent(new Event('submit'));
+                                }, 100);
+                                
+                                updateStatus('Real voice processed and sent', 'connected');
+                            };
+                            
+                            recognition.onerror = async (event) => {
+                                console.error('🎤 Web Speech Recognition error:', event.error);
+                                addDebugLog(`Web Speech Recognition error: ${event.error}`);
+                                
+                                // Show specific error message
+                                let errorMsg = 'Speech recognition failed';
+                                switch(event.error) {
+                                    case 'network':
+                                        errorMsg = 'Network error - trying fallback method';
+                                        break;
+                                    case 'not-allowed':
+                                        errorMsg = 'Microphone permission denied - trying fallback method';
+                                        break;
+                                    case 'no-speech':
+                                        errorMsg = 'No speech detected - trying fallback method';
+                                        break;
+                                    default:
+                                        errorMsg = `Speech recognition error (${event.error}) - trying fallback method`;
+                                }
+                                showToast(errorMsg, 'warning');
+                                
+                                // Fallback to MediaRecorder approach
+                                console.log('🎤 Falling back to MediaRecorder approach');
+                                addDebugLog('Falling back to MediaRecorder approach');
+                                await useMediaRecorderFallback();
+                            };
+                            
+                            recognition.onend = () => {
+                                console.log('🎤 Web Speech Recognition ended');
+                                addDebugLog('Web Speech Recognition ended');
+                                isRecording = false;
+                                voiceBtn.classList.remove('recording');
+                                voiceRecording.style.display = 'none';
+                            };
+                            
+                            console.log('🎤 Starting Web Speech Recognition...');
+                            addDebugLog('Starting Web Speech Recognition...');
+                            recognition.start();
+                            console.log('🎤 Web Speech Recognition start() called');
+                            addDebugLog('Web Speech Recognition start() called');
+                            return; // Exit here if Web Speech API works
+                            
+                        } catch (webSpeechError) {
+                            console.log('🎤 Web Speech API failed, falling back to MediaRecorder');
+                            addDebugLog(`Web Speech API failed: ${webSpeechError.message}`);
+                            showToast('Web Speech API failed - using fallback method', 'warning');
+                            // Continue to MediaRecorder fallback below
+                        }
+                    } else {
+                        console.log('🎤 Web Speech API not available - using MediaRecorder');
+                        addDebugLog('Web Speech API not available - using MediaRecorder');
+                        showToast('Web Speech API not available - using recording method', 'info');
+                    }
+                    
+                    // MediaRecorder fallback for when Web Speech API is not available or fails
+                    console.log('🎤 Using MediaRecorder fallback method');
+                    addDebugLog('Using MediaRecorder fallback method');
+                    
+                    if (isElectron) {
+                    
+                    // Use Web Speech API for real speech recognition
+                    console.log('🎤 Attempting to use Web Speech API...');
+                    addDebugLog('Attempting to use Web Speech API...');
+                    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                        console.log('🎤 Speech Recognition API is available');
+                        addDebugLog('Speech Recognition API is available');
+                        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                        recognition = new SpeechRecognition();
+                        
+                        console.log('🎤 Speech Recognition object created:', recognition);
+                        
+                        recognition.continuous = false;
+                        recognition.interimResults = false;
+                        recognition.lang = 'en-US';
+                        
+                        console.log('🎤 Speech Recognition configured with settings:', {
+                            continuous: recognition.continuous,
+                            interimResults: recognition.interimResults,
+                            lang: recognition.lang
+                        });
+                        addDebugLog(`Speech Recognition configured: continuous=${recognition.continuous}, lang=${recognition.lang}`);
+                        
+                        console.log('🎤 Setting up Speech Recognition event handlers...');
+                        
+                        recognition.onstart = () => {
+                            console.log('🎤 Speech Recognition started successfully');
+                            addDebugLog('Speech Recognition started successfully');
+                            isRecording = true;
+                            voiceBtn.classList.add('recording');
+                            voiceRecording.style.display = 'flex';
+                            updateStatus('Recording... Speak now', 'connected');
+                        };
+                        
+                        recognition.onresult = (event) => {
+                            console.log('🎤 Speech recognition result event:', event);
+                            const transcript = event.results[0][0].transcript;
+                            console.log('🎤 Speech transcript received:', transcript);
+                            addDebugLog(`Speech transcript received: "${transcript}"`);
+                            
+                            document.getElementById('message-input').value = transcript;
+                            updateCharCounter();
+                            autoResizeTextarea();
+                            showToast('Voice input captured: ' + transcript, 'success');
+                            updateStatus('Voice processed', 'connected');
+                        };
+                        
+                        recognition.onerror = (event) => {
+                            console.error('🎤 Speech recognition error details:', {
+                                error: event.error,
+                                message: event.message,
+                                timeStamp: event.timeStamp,
+                                type: event.type,
+                                target: event.target
+                            });
+                            addDebugLog(`Speech recognition error: ${event.error} - ${event.message || 'No additional message'}`);
+                            
+                            // Check internet connectivity when network error occurs
+                            if (event.error === 'network') {
+                                console.log('🌐 Network error detected - rechecking connectivity...');
+                                addDebugLog('Network error detected - rechecking connectivity...');
+                                checkInternetConnectivity().then(hasNet => {
+                                    console.log('🌐 Connectivity recheck after network error:', hasNet);
+                                    addDebugLog(`Connectivity recheck after network error: ${hasNet}`);
+                                });
+                            }
+                            
+                            // Handle different error types
+                            let errorMessage = 'Speech recognition failed';
+                            switch(event.error) {
+                                case 'network':
+                                    errorMessage = 'Network error - speech recognition requires internet connection';
+                                    console.log('❌ Network error in speech recognition despite connectivity check');
+                                    addDebugLog('Network error in speech recognition despite connectivity check');
+                                    break;
+                                case 'no-speech':
+                                    errorMessage = 'No speech detected - please try speaking again';
+                                    break;
+                                case 'audio-capture':
+                                    errorMessage = 'Microphone access denied or not available';
+                                    break;
+                                case 'not-allowed':
+                                    errorMessage = 'Microphone permission denied - please allow microphone access';
+                                    break;
+                                case 'service-not-allowed':
+                                    errorMessage = 'Speech recognition service not available';
+                                    break;
+                                default:
+                                    errorMessage = `Speech recognition error: ${event.error}`;
+                            }
+                            
+                            showToast(errorMessage, 'error');
+                            updateStatus('Voice recognition failed', 'disconnected');
+                            
+                            // Reset UI state
+                            isRecording = false;
+                            voiceBtn.classList.remove('recording');
+                            voiceRecording.style.display = 'none';
+                            
+                            // Auto-fallback for network errors
+                            if (event.error === 'network') {
+                                console.log('🔄 Auto-fallback triggered due to network error');
+                                addDebugLog('Auto-fallback triggered due to network error');
+                                setTimeout(() => {
+                                    showFallbackVoiceInput();
+                                }, 1000);
+                            }
+                        };
+                        
+                        recognition.onend = () => {
+                            console.log('🎤 Speech Recognition ended');
+                            addDebugLog('Speech Recognition ended');
+                            isRecording = false;
+                            voiceBtn.classList.remove('recording');
+                            voiceRecording.style.display = 'none';
+                        };
+                        
+                        console.log('🎤 Starting Speech Recognition...');
+                        addDebugLog('Starting Speech Recognition...');
+                        recognition.start();
+                        console.log('🎤 Speech Recognition start() called successfully');
+                        addDebugLog('Speech Recognition start() called successfully');
+                    } else {
+                        console.error('🎤 Speech Recognition API not available in this environment');
+                        addDebugLog('Speech Recognition API not available in this environment');
+                        console.log('Available APIs:', {
+                            webkitSpeechRecognition: 'webkitSpeechRecognition' in window,
+                            SpeechRecognition: 'SpeechRecognition' in window,
+                            navigator: !!navigator.mediaDevices
+                        });
+                        showToast('Speech recognition not supported in this browser', 'error');
+                        showFallbackVoiceInput();
+                        updateStatus('Voice recognition not supported', 'disconnected');
+                    }
+                } catch (error) {
+                    console.error('🎤 Error starting voice recording:', {
+                        name: error.name,
+                        message: error.message,
+                        stack: error.stack
+                    });
+                    showToast('Failed to start recording', 'error');
+                    updateStatus('Recording failed', 'disconnected');
+                }
+            } else {
+                console.log('🎤 Stopping voice recording...');
+                await stopRecording();
+            }
+        }
+
+        async function stopRecording() {
+            const voiceBtn = document.getElementById('voice-btn');
+            const voiceRecording = document.getElementById('voice-recording');
+            
+            try {
+                updateStatus('Processing voice...', 'connecting');
+                
+                if (recognition) {
+                    // Stop Web Speech API recognition
+                    recognition.stop();
+                    recognition = null;
+                } else {
+                    // Fallback to backend service
+                    const result = await window.electronAPI.voice.stopRecording();
+                    console.log('Voice recording result:', result);
+                    
+                    isRecording = false;
+                    voiceBtn.classList.remove('recording');
+                    voiceRecording.style.display = 'none';
+                    
+                    if (result.success && result.transcript) {
+                        document.getElementById('message-input').value = result.transcript;
+                        updateCharCounter();
+                        autoResizeTextarea();
+                        showToast('Voice input captured', 'success');
+                        updateStatus('Voice processed', 'connected');
+                    } else {
+                        console.error('Voice recording failed or no transcript:', result);
+                        showToast('No speech detected', 'warning');
+                        updateStatus('No speech detected', 'connected');
+                    }
+                }
+            } catch (error) {
+                console.error('Error stopping recording:', error);
+                showToast('Failed to process voice', 'error');
+                updateStatus('Voice processing failed', 'disconnected');
+                
+                isRecording = false;
+                voiceBtn.classList.remove('recording');
+                voiceRecording.style.display = 'none';
+                
+                if (recognition) {
+                    recognition.stop();
+                    recognition = null;
+                }
+            }
+        }
+
+        function showFallbackVoiceInput() {
+            // Create a proper HTML modal for text input instead of prompt()
+            const isElectron = window.electronAPI !== undefined;
+            const reason = isElectron ? 
+                'Audio was successfully recorded but speech-to-text processing requires an external service.\n\nFor now, please type what you said:' :
+                'Voice recognition requires an internet connection or is not supported.\n\nPlease type what you wanted to say:';
+            
+            const title = isElectron ? 'Speech Processing Not Available' : 'Voice Recognition Not Available';
+            
+            showTextInputModal(
+                title,
+                reason,
+                '',
+                (inputText) => {
+                    if (inputText && inputText.trim()) {
+                        document.getElementById('message-input').value = inputText.trim();
+                        updateCharCounter();
+                        autoResizeTextarea();
+                        const mode = isElectron ? 'audio recorded' : 'offline mode';
+                        showToast(`Text input captured (${mode})`, 'info');
+                        updateStatus('Text input captured', 'connected');
+                        addDebugLog(`Text input captured via fallback: "${inputText.trim()}"`);
+                    } else {
+                        updateStatus('Voice input cancelled', 'connected');
+                        addDebugLog('Voice input cancelled by user');
+                    }
+                }
+            );
+        }
+
+        function showTextInputModal(title, message, placeholder, callback) {
+            // Create modal overlay
+            const modalOverlay = document.createElement('div');
+            modalOverlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            `;
+
+            // Create modal content
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                background: white;
+                border-radius: 8px;
+                padding: 24px;
+                min-width: 400px;
+                max-width: 500px;
+                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            `;
+
+            modal.innerHTML = `
+                <h3 style="margin: 0 0 16px 0; color: #333; font-size: 18px;">${title}</h3>
+                <p style="margin: 0 0 20px 0; color: #666; line-height: 1.5; white-space: pre-line;">${message}</p>
+                <textarea 
+                    id="modal-text-input" 
+                    placeholder="${placeholder}"
+                    style="
+                        width: 100%; 
+                        height: 100px; 
+                        padding: 12px; 
+                        border: 2px solid #ddd; 
+                        border-radius: 6px; 
+                        font-size: 14px; 
+                        font-family: inherit;
+                        resize: vertical;
+                        box-sizing: border-box;
+                        margin-bottom: 20px;
+                    "
+                ></textarea>
+                <div style="text-align: right;">
+                    <button 
+                        id="modal-cancel-btn"
+                        style="
+                            background: #f5f5f5; 
+                            border: none; 
+                            padding: 10px 20px; 
+                            border-radius: 6px; 
+                            margin-right: 10px; 
+                            cursor: pointer;
+                            font-size: 14px;
+                        "
+                    >Cancel</button>
+                    <button 
+                        id="modal-ok-btn"
+                        style="
+                            background: #007AFF; 
+                            color: white; 
+                            border: none; 
+                            padding: 10px 20px; 
+                            border-radius: 6px; 
+                            cursor: pointer;
+                            font-size: 14px;
+                        "
+                    >OK</button>
+                </div>
+            `;
+
+            modalOverlay.appendChild(modal);
+            document.body.appendChild(modalOverlay);
+
+            const textInput = modal.querySelector('#modal-text-input');
+            const okBtn = modal.querySelector('#modal-ok-btn');
+            const cancelBtn = modal.querySelector('#modal-cancel-btn');
+
+            // Focus the textarea
+            setTimeout(() => textInput.focus(), 100);
+
+            // Handle OK button
+            okBtn.addEventListener('click', () => {
+                const value = textInput.value;
+                document.body.removeChild(modalOverlay);
+                callback(value);
+            });
+
+            // Handle Cancel button
+            cancelBtn.addEventListener('click', () => {
+                document.body.removeChild(modalOverlay);
+                callback(null);
+            });
+
+            // Handle Enter key (Ctrl+Enter to submit)
+            textInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    okBtn.click();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelBtn.click();
+                }
+            });
+
+            // Handle clicking outside modal
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    cancelBtn.click();
+                }
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toast-container');
+            
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `
+                <p>${message}</p>
+                <button class="toast-close">×</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 3000);
+            
+            // Manual close
+            toast.querySelector('.toast-close').addEventListener('click', () => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            });
+        }
+
+        // API Key Management Functions
+        async function saveApiKeys() {
+            const openaiKey = document.getElementById('openai-key').value.trim();
+            const anthropicKey = document.getElementById('anthropic-key').value.trim();
+            const geminiKey = document.getElementById('gemini-key').value.trim();
+            const saveBtn = document.getElementById('save-api-keys');
+            
+            if (!openaiKey && !anthropicKey && !geminiKey) {
+                showToast('Please enter at least one API key', 'warning');
+                return;
+            }
+            
+            try {
+                saveBtn.textContent = 'Saving...';
+                saveBtn.disabled = true;
+                
+                const result = await window.electronAPI.ai.updateKeys({
+                    openaiKey: openaiKey || undefined,
+                    anthropicKey: anthropicKey || undefined,
+                    geminiKey: geminiKey || undefined
+                });
+                
+                if (result.success) {
+                    showToast('API keys saved successfully', 'success');
+                    updateStatus('API keys configured', 'connected');
+                } else {
+                    showToast(`Failed to save API keys: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error saving API keys:', error);
+                showToast('Failed to save API keys', 'error');
+            } finally {
+                saveBtn.textContent = 'Save API Keys';
+                saveBtn.disabled = false;
+            }
+        }
+
+        async function testConnection(provider) {
+            const testBtn = document.getElementById(`test-${provider}`);
+            const apiKeyInput = document.getElementById(`${provider}-key`);
+            const originalText = testBtn.textContent;
+            
+            // Check if API key is entered
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showToast(`Please enter your ${provider.charAt(0).toUpperCase() + provider.slice(1)} API key first`, 'warning');
+                return;
+            }
+            
+            // Save the API key before testing
+            try {
+                testBtn.textContent = 'Saving...';
+                testBtn.disabled = true;
+                
+                const saveResult = await window.electronAPI.ai.updateKeys({
+                    [provider + 'Key']: apiKey
+                });
+                
+                if (!saveResult.success) {
+                    showToast(`Failed to save API key: ${saveResult.error}`, 'error');
+                    return;
+                }
+                
+                // Now test the connection
+                testBtn.textContent = 'Testing...';
+                console.log(`Testing ${provider} connection...`);
+                
+                const result = await window.electronAPI.ai.testConnection(provider);
+                console.log(`${provider} test result:`, result);
+                
+                if (result.success && result.connected) {
+                    showToast(`${provider.charAt(0).toUpperCase() + provider.slice(1)} connection successful! ✅`, 'success');
+                    testBtn.style.backgroundColor = 'var(--success)';
+                    testBtn.style.color = 'white';
+                    testBtn.textContent = '✅ Success';
+                    setTimeout(() => {
+                        testBtn.style.backgroundColor = '';
+                        testBtn.style.color = '';
+                        testBtn.textContent = originalText;
+                    }, 3000);
+                } else {
+                    const errorMsg = result.error || 'Connection failed';
+                    showToast(`${provider.charAt(0).toUpperCase() + provider.slice(1)} connection failed: ${errorMsg}`, 'error');
+                    testBtn.style.backgroundColor = 'var(--error)';
+                    testBtn.style.color = 'white';
+                    testBtn.textContent = '❌ Failed';
+                    setTimeout(() => {
+                        testBtn.style.backgroundColor = '';
+                        testBtn.style.color = '';
+                        testBtn.textContent = originalText;
+                    }, 3000);
+                }
+            } catch (error) {
+                console.error(`Error testing ${provider} connection:`, error);
+                showToast(`Failed to test ${provider} connection: ${error.message}`, 'error');
+                testBtn.style.backgroundColor = 'var(--error)';
+                testBtn.style.color = 'white';
+                testBtn.textContent = '❌ Error';
+                setTimeout(() => {
+                    testBtn.style.backgroundColor = '';
+                    testBtn.style.color = '';
+                    testBtn.textContent = originalText;
+                }, 3000);
+            } finally {
+                testBtn.disabled = false;
+                if (testBtn.textContent === 'Saving...' || testBtn.textContent === 'Testing...') {
+                    testBtn.textContent = originalText;
+                }
+            }
+        }
+
+        // Debug Panel Functions
+        let debugLogs = [];
+        
+        function addDebugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            debugLogs.push(`[${timestamp}] ${message}`);
+            if (debugLogs.length > 50) {
+                debugLogs.shift(); // Keep only last 50 logs
+            }
+            updateDebugLogs();
+        }
+        
+        function updateDebugLogs() {
+            const debugLogsElement = document.getElementById('debug-logs');
+            if (debugLogsElement) {
+                debugLogsElement.textContent = debugLogs.join('\n');
+                debugLogsElement.scrollTop = debugLogsElement.scrollHeight;
+            }
+        }
+        
+        function toggleDebugPanel() {
+            const debugPanel = document.getElementById('debug-panel');
+            const isVisible = debugPanel.style.display !== 'none';
+            
+            if (isVisible) {
+                hideDebugPanel();
+            } else {
+                showDebugPanel();
+            }
+        }
+        
+        function showDebugPanel() {
+            const debugPanel = document.getElementById('debug-panel');
+            debugPanel.style.display = 'block';
+            updateDebugInfo();
+        }
+        
+        function hideDebugPanel() {
+            const debugPanel = document.getElementById('debug-panel');
+            debugPanel.style.display = 'none';
+        }
+        
+        async function updateDebugInfo() {
+            // Environment information
+            const envInfo = {
+                userAgent: navigator.userAgent,
+                isElectron: window.electronAPI !== undefined,
+                hasWebSpeechAPI: 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window,
+                hasMediaDevices: !!navigator.mediaDevices,
+                language: navigator.language,
+                platform: navigator.platform,
+                timestamp: new Date().toISOString()
+            };
+            
+            document.getElementById('debug-environment').textContent = JSON.stringify(envInfo, null, 2);
+            
+            // Connectivity information
+            try {
+                console.log('🔧 Debug panel: Checking connectivity...');
+                const connectivityInfo = await window.electronAPI.network.checkConnectivity();
+                document.getElementById('debug-connectivity').textContent = JSON.stringify(connectivityInfo, null, 2);
+                addDebugLog('Connectivity check completed for debug panel');
+            } catch (error) {
+                document.getElementById('debug-connectivity').textContent = `Error: ${error.message}`;
+                addDebugLog(`Connectivity check failed: ${error.message}`);
+            }
+            
+            // Speech Recognition information  
+            const speechInfo = {
+                webSpeechAPIAvailable: 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window,
+                mediaDevicesAvailable: !!navigator.mediaDevices,
+                currentlyRecording: isRecording,
+                lastVoiceError: 'None',
+                electronEnvironment: window.electronAPI !== undefined
+            };
+            
+            document.getElementById('debug-speech').textContent = JSON.stringify(speechInfo, null, 2);
+        }
+        
+        // Override console.log to capture logs
+        const originalConsoleLog = console.log;
+        const originalConsoleError = console.error;
+        
+        console.log = function(...args) {
+            originalConsoleLog.apply(console, args);
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('🎤')) {
+                addDebugLog(`LOG: ${args.join(' ')}`);
+            }
+        };
+        
+        console.error = function(...args) {
+            originalConsoleError.apply(console, args);
+            if (args[0] && typeof args[0] === 'string' && args[0].includes('🎤')) {
+                addDebugLog(`ERROR: ${args.join(' ')}`);
+            }
+        };
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>

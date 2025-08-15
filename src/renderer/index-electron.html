@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GVAIBot - AI Chatbot with Voice and MCP Integration</title>
+    <link rel="stylesheet" href="css/main.css">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+</head>
+<body class="theme-dark">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <h1>🤖 GVAIBot</h1>
+                <span class="version">v1.0.0 - Electron Edition</span>
+            </div>
+            <div class="controls">
+                <button id="theme-toggle" class="btn btn-secondary" title="Toggle theme">
+                    🌙
+                </button>
+                <button id="voice-toggle" class="btn btn-secondary" title="Toggle voice input">
+                    🎤
+                </button>
+                <div class="status-indicator" id="status-indicator">
+                    <span class="status-dot"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h3>📋 Features</h3>
+            </div>
+            <div class="sidebar-content">
+                <div class="feature-list">
+                    <div class="feature-item">
+                        <span class="feature-icon">💬</span>
+                        <span class="feature-label">AI Chat</span>
+                    </div>
+                    <div class="feature-item disabled">
+                        <span class="feature-icon">🎤</span>
+                        <span class="feature-label">Voice Input</span>
+                    </div>
+                    <div class="feature-item disabled">
+                        <span class="feature-icon">🔌</span>
+                        <span class="feature-label">MCP Integration</span>
+                    </div>
+                    <div class="feature-item disabled">
+                        <span class="feature-icon">⚡</span>
+                        <span class="feature-label">Function Calls</span>
+                    </div>
+                </div>
+                
+                <div class="info-panel">
+                    <h4>🔧 Configuration</h4>
+                    <div id="config-display">
+                        <p>Loading...</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Chat Area -->
+        <section class="chat-container">
+            <div class="chat-header">
+                <h2>💬 Chat</h2>
+                <button id="clear-chat" class="btn btn-danger btn-sm">Clear</button>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="message system-message">
+                    <div class="message-content">
+                        <p>🎉 Welcome to GVAIBot Electron Edition!</p>
+                        <p>This is a desktop AI chatbot with voice and MCP integration capabilities.</p>
+                        <p>Start by typing a message below or click the voice button to speak.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        id="message-input" 
+                        placeholder="Type your message here..." 
+                        rows="3"
+                        maxlength="4000"></textarea>
+                    <div class="input-actions">
+                        <button id="voice-button" class="btn btn-secondary" title="Voice input" disabled>
+                            🎤
+                        </button>
+                        <button id="send-button" class="btn btn-primary" title="Send message">
+                            Send
+                        </button>
+                    </div>
+                </div>
+                <div class="input-info">
+                    <span id="char-count">0/4000</span>
+                    <span id="typing-indicator" class="typing-indicator" style="display: none;">
+                        <span></span><span></span><span></span>
+                    </span>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script>
+        // Basic Electron app functionality
+        let isTyping = false;
+        let config = null;
+
+        // Initialize the app
+        async function initializeApp() {
+            console.log('🚀 Initializing GVAIBot Electron App...');
+            
+            // Load configuration
+            try {
+                const configResult = await window.electronAPI.app.getConfig();
+                if (configResult.success) {
+                    config = configResult.config;
+                    updateConfigDisplay();
+                }
+            } catch (error) {
+                console.error('Failed to load config:', error);
+            }
+
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Update status
+            updateStatus('Ready', 'online');
+            
+            console.log('✅ App initialized');
+        }
+
+        function setupEventListeners() {
+            // Send button
+            document.getElementById('send-button').addEventListener('click', sendMessage);
+            
+            // Enter key to send
+            document.getElementById('message-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Character counter
+            document.getElementById('message-input').addEventListener('input', updateCharCount);
+
+            // Clear chat
+            document.getElementById('clear-chat').addEventListener('click', clearChat);
+
+            // Theme toggle
+            document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Clear input
+            input.value = '';
+            updateCharCount();
+
+            // Show typing indicator
+            setTyping(true);
+            updateStatus('Thinking...', 'processing');
+
+            try {
+                const result = await window.electronAPI.chat.sendMessage(message);
+                
+                if (result.success && result.response) {
+                    addMessage(result.response, 'assistant');
+                } else {
+                    addMessage('Sorry, there was an error processing your message.', 'error');
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                addMessage('Connection error. Please try again.', 'error');
+            } finally {
+                setTyping(false);
+                updateStatus('Ready', 'online');
+            }
+        }
+
+        function addMessage(content, sender) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            const textP = document.createElement('p');
+            textP.textContent = content;
+            
+            contentDiv.appendChild(textP);
+            messageDiv.appendChild(contentDiv);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function setTyping(typing) {
+            isTyping = typing;
+            const indicator = document.getElementById('typing-indicator');
+            indicator.style.display = typing ? 'flex' : 'none';
+        }
+
+        function updateCharCount() {
+            const input = document.getElementById('message-input');
+            const counter = document.getElementById('char-count');
+            counter.textContent = `${input.value.length}/4000`;
+        }
+
+        function updateStatus(text, type) {
+            const statusText = document.getElementById('status-text');
+            const statusDot = document.querySelector('.status-dot');
+            
+            statusText.textContent = text;
+            statusDot.className = `status-dot status-${type}`;
+        }
+
+        function clearChat() {
+            const messagesContainer = document.getElementById('chat-messages');
+            messagesContainer.innerHTML = `
+                <div class="message system-message">
+                    <div class="message-content">
+                        <p>Chat cleared. Start a new conversation!</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            if (body.classList.contains('theme-dark')) {
+                body.classList.remove('theme-dark');
+                body.classList.add('theme-light');
+                themeToggle.textContent = '☀️';
+            } else {
+                body.classList.remove('theme-light');
+                body.classList.add('theme-dark');
+                themeToggle.textContent = '🌙';
+            }
+        }
+
+        function updateConfigDisplay() {
+            const configDisplay = document.getElementById('config-display');
+            if (config) {
+                configDisplay.innerHTML = `
+                    <p><strong>Provider:</strong> ${config.aiProvider}</p>
+                    <p><strong>Environment:</strong> ${config.environment}</p>
+                `;
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
+<!-- removed: legacy pre-React entry; use src/renderer/react/index.html via Vite build -->

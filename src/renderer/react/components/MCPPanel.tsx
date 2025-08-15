@@ -298,18 +298,20 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
                       Connect to fetch tools.
                     </div>
                   )}
-      {selected.status === "connected" && (
+                  {selected.status === "connected" && (
                     <div
                       style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
                     >
                       {(toolsByServer[selected.id] || []).map((t: any) => (
                         <button
                           key={t.name}
-        type="button"
-        className={`chip ${toolName === t.name ? "selected" : ""}`}
+                          type="button"
+                          className={`chip ${
+                            toolName === t.name ? "selected" : ""
+                          }`}
                           title={t.description || t.name}
-        aria-pressed={toolName === t.name}
-        onClick={() => setToolName(t.name)}
+                          aria-pressed={toolName === t.name}
+                          onClick={() => setToolName(t.name)}
                         >
                           {t.name}
                         </button>
@@ -360,13 +362,13 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
                 {formatError && (
                   <div className="mcp-alert error compact">{formatError}</div>
                 )}
-        <div className="invoke-actions">
+                <div className="invoke-actions">
                   <button
                     className="btn primary"
                     onClick={handleInvoke}
                     disabled={invoking || selected.status !== "connected"}
                   >
-          {invoking ? "Invoking..." : `Invoke (${toolName})`}
+                    {invoking ? "Invoking..." : `Invoke (${toolName})`}
                   </button>
                   <button
                     className="btn"

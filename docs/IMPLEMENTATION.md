@@ -77,6 +77,7 @@ This document provides a comprehensive step-by-step guide for implementing the A
 - **TypeScript Configuration**: Strict TypeScript setup with path aliases and proper type checking
 - **Environment Configuration**: Comprehensive config management with validation using Joi
 - **Documentation**: README.md with detailed setup and feature overview
+
 ## GVAIBot — Implementation (Desktop-first, Electron + React)
 
 Last updated: 2025-08-13
@@ -106,6 +107,7 @@ This document describes the current implementation of GVAIBot as a desktop-first
 - Tools are available in a dedicated MCP panel and via chat commands.
 
 Renderer UX details:
+
 - Slash-commands: `/mcp tools`, `/mcp <tool> {json}`, and `/clip` alias.
 - Suggestion engine (dynamically imported) fetches tools and derives JSON templates from tool input schemas.
 - Panels (MCPPanel, SettingsPanel) are lazy-loaded to reduce initial JS.
@@ -140,10 +142,10 @@ Renderer UX details:
 
 ### Adding another MCP server (summary)
 
-1) Register a server in `src/main.ts` via `mcpService.registerServerConfig({ id, name, command, args, cwd })`.
-2) Ensure the server writes only JSON-RPC to stdout and logs to stderr.
-3) Optionally auto-connect on app ready and broadcast `mcp:servers-updated`.
-4) Renderer will list it in the MCP panel; slash-commands will route to it if you add parsing rules.
+1. Register a server in `src/main.ts` via `mcpService.registerServerConfig({ id, name, command, args, cwd })`.
+2. Ensure the server writes only JSON-RPC to stdout and logs to stderr.
+3. Optionally auto-connect on app ready and broadcast `mcp:servers-updated`.
+4. Renderer will list it in the MCP panel; slash-commands will route to it if you add parsing rules.
 
 ### Troubleshooting
 

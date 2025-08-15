@@ -102,9 +102,20 @@ export function useMCP() {
   const loadTools = useCallback(async (id: string) => {
     if (!window.electronAPI) return [];
     try {
+      const start = Date.now();
+      const slowWarn = setTimeout(() => {
+        console.warn(`[MCP] tools/list for ${id} is taking a while…`);
+      }, 5000);
       const res = await window.electronAPI.mcp.listTools(id);
+      clearTimeout(slowWarn);
+      const dur = Date.now() - start;
       if (res.success) {
         setToolsByServer((m) => ({ ...m, [id]: res.tools || [] }));
+        console.info(
+          `[MCP] tools/list for ${id} loaded ${
+            res.tools?.length || 0
+          } tools in ${dur}ms`
+        );
         return res.tools || [];
       }
     } catch {}

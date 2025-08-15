@@ -117,6 +117,14 @@ body {
   flex-shrink: 0;
 }
 
+/* Frameless window drag regions */
+.draggable {
+  -webkit-app-region: drag;
+}
+.no-drag, .control-btn, .control-btn * {
+  -webkit-app-region: no-drag;
+}
+
 .header-content {
   display: flex;
   justify-content: space-between;

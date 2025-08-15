@@ -184,7 +184,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
     rec.onstop = async () => {
       try {
-        const blob = new Blob(chunksRef.current, { type: mimeType || "audio/webm" });
+        const blob = new Blob(chunksRef.current, {
+          type: mimeType || "audio/webm",
+        });
         const buf = await blob.arrayBuffer();
         const res = await window.electronAPI.voice.processAudio(buf);
         if (!res?.success) {
@@ -195,13 +197,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
           onSendMessage(transcript.trim(), "voice");
         } else if (!res?.success) {
           // Show error as assistant message to make it visible
-          onSendMessage(`(Speech recognition error) ${res.error || "Unknown error"}`);
+          onSendMessage(
+            `(Speech recognition error) ${res.error || "Unknown error"}`
+          );
         } else {
           console.warn("No transcript returned from STT");
         }
       } catch (err) {
         console.error("Failed to process recorded audio:", err);
-        onSendMessage("(Speech capture error) Unable to process recorded audio.");
+        onSendMessage(
+          "(Speech capture error) Unable to process recorded audio."
+        );
       } finally {
         // Cleanup tracks
         try {

@@ -904,3 +904,75 @@
     "stack": "Error: Speech API error: 403 Forbidden\n    at VoiceService.processAudioToText (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:139:23)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async VoiceService.processAudio (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\voiceService.js:186:24)\n    at async C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:340:32\n    at async Session.<anonymous> (node:electron/js2c/browser_init:2:107024)"
   }
 }
+2025-08-15 12:00:28 [ERROR]: Failed to ensure MCP connection:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "init timeout",
+    "stack": "Error: init timeout\n    at Timeout._onTimeout (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:369:61)\n    at listOnTimeout (node:internal/timers:588:17)\n    at process.processTimers (node:internal/timers:523:7)"
+  }
+}
+2025-08-15 12:35:34 [ERROR]: Child MCP call failed (clipplayer:ampp_refresh_application_schemas)
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "stopped",
+    "stack": "Error: stopped\n    at MCPChild.stop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:404:29)\n    at MCPService.disconnectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:182:19)\n    at MCPService.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:265:28)\n    at GVAIBotApp.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:721:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async App.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:13)"
+  }
+}
+2025-08-15 12:37:53 [ERROR]: Child MCP call failed (clipplayer:ampp_refresh_application_schemas)
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "stopped",
+    "stack": "Error: stopped\n    at MCPChild.stop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:410:29)\n    at MCPService.disconnectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:182:19)\n    at MCPService.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:265:28)\n    at GVAIBotApp.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:721:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async App.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:13)"
+  }
+}
+2025-08-15 12:39:46 [ERROR]: Child MCP call failed (clipplayer:ampp_refresh_application_schemas)
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "stopped",
+    "stack": "Error: stopped\n    at MCPChild.stop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:410:29)\n    at MCPService.disconnectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:182:19)\n    at MCPService.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:265:28)\n    at GVAIBotApp.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:721:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async App.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:13)"
+  }
+}
+2025-08-15 12:50:56 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server filesystem is not connected",
+    "stack": "Error: Server filesystem is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:284:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:543:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-15 12:50:56 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server filesystem is not connected",
+    "stack": "Error: Server filesystem is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:284:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:543:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-15 12:50:56 [ERROR]: ❌ Error listing MCP tools:
+{
+  "correlationId": "Main",
+  "error": {
+    "name": "Error",
+    "message": "Server filesystem is not connected",
+    "stack": "Error: Server filesystem is not connected\n    at MCPService.listTools (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:284:19)\n    at C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:543:48\n    at Session.<anonymous> (node:electron/js2c/browser_init:2:107040)\n    at Session.emit (node:events:518:28)"
+  }
+}
+2025-08-15 17:40:34 [ERROR]: Child MCP call failed (clipplayer:ampp_refresh_application_schemas)
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "stopped",
+    "stack": "Error: stopped\n    at MCPChild.stop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcp\\child.js:112:29)\n    at MCPService.disconnectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:140:19)\n    at MCPService.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:223:28)\n    at GVAIBotApp.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:779:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async App.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:13)"
+  }
+}

@@ -16,6 +16,7 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMCPPanelOpen, setIsMCPPanelOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [pendingNotice, setPendingNotice] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>({
     aiProvider: "gemini",
     voiceEnabled: false,
@@ -42,6 +43,70 @@ const App: React.FC = () => {
     // Auto scroll to bottom when new messages arrive
     scrollToBottom();
   }, [messages]);
+
+  // Listen for MCP server status updates to surface a short chat notice
+  useEffect(() => {
+    if (!isElectronAvailable || !window.electronAPI?.mcp?.onServersUpdated)
+      return;
+    const off = window.electronAPI.mcp.onServersUpdated(
+      async ({ serverId, status }) => {
+        if (serverId !== "clipplayer") return;
+        if (status === "connected") {
+          // Show a brief system message that schemas are bootstrapping
+          const msgId = `sys_${Date.now()}`;
+          const sysMessage: Message = {
+            id: msgId,
+            content:
+              "Connecting to Clip Player… bootstrapping schemas and loading tools…",
+            sender: "assistant",
+            timestamp: new Date(),
+            type: "text",
+          };
+          setMessages((prev) => [...prev, sysMessage]);
+          setPendingNotice(msgId);
+          // Safety timeout to avoid a stuck message
+          const safetyId = setTimeout(() => {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === msgId
+                  ? {
+                      ...m,
+                      content:
+                        "Still loading MCP tools… If this takes too long, try closing and reopening the MCP panel or reconnecting.",
+                    }
+                  : m
+              )
+            );
+          }, 20000);
+          // Proactively ask main to list tools to detect when loading completes
+          try {
+            await window.electronAPI.mcp.listTools("clipplayer");
+          } catch {}
+          // Replace the notice with a confirmation line
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === msgId
+                ? {
+                    ...m,
+                    content:
+                      "Schemas refreshed and tools loaded. You can now ask for AMPP commands or Clip Player controls.",
+                  }
+                : m
+            )
+          );
+          setPendingNotice(null);
+          try {
+            clearTimeout(safetyId);
+          } catch {}
+        }
+      }
+    );
+    return () => {
+      try {
+        if (typeof off === "function") off();
+      } catch {}
+    };
+  }, [isElectronAvailable]);
 
   const initializeApp = async () => {
     try {
@@ -77,7 +142,7 @@ const App: React.FC = () => {
   const addWelcomeMessage = () => {
     const welcomeMessage: Message = {
       id: Date.now().toString(),
-      content: "Hello! I'm your AI assistant. How can I help you today?",
+      content: "Hi, I'm OctAIvius. How can I help you today?",
       sender: "assistant",
       timestamp: new Date(),
       type: "text",
@@ -111,6 +176,19 @@ const App: React.FC = () => {
       let response: string;
 
       if (isElectronAvailable) {
+        // If we are still waiting on MCP tools, echo a short waiting message in chat
+        if (pendingNotice) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `sys_wait_${Date.now()}`,
+              content: "Still loading MCP tools… please wait a moment.",
+              sender: "assistant",
+              timestamp: new Date(),
+              type: "text",
+            },
+          ]);
+        }
         response = await sendElectronMessage(content);
       } else {
         response = await simulateAIResponse(content);
@@ -221,6 +299,7 @@ const App: React.FC = () => {
       <Header
         isConnected={isConnected}
         isVoiceEnabled={isVoiceEnabled}
+        isMcpLoading={!!pendingNotice}
         onVoiceToggle={handleVoiceToggle}
         onSettingsToggle={handleSettingsToggle}
         onClearChat={handleClearChat}

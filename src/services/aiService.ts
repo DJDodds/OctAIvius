@@ -8,18 +8,31 @@ import { Logger } from "../utils/logger";
 import { ChatMessage, FunctionCall } from "../types";
 import OpenAI from "openai";
 import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
-import axios from "axios";
+import { OpenAIProvider } from "./ai/providers/openaiProvider";
+import { GeminiProvider } from "./ai/providers/geminiProvider";
+import { AnthropicProvider } from "./ai/providers/anthropicProvider";
+import { ConversationManager } from "./ai/core/conversation";
+import { Connectivity } from "./ai/core/connectivity";
+import { getMockResponse } from "./ai/core/mock";
+import { AIProcessors } from "./ai/core/processors";
+import { initOpenAI, initGemini, initAnthropic } from "./ai/core/init";
+import { testOpenAI, testGemini, testAnthropic } from "./ai/core/tests";
 
 export class AIService {
   private logger: Logger;
-  private openaiClient: OpenAI | null = null;
+  private openaiClient: OpenAI | null = null; // kept for compatibility
   private anthropicApiKey: string | null = null;
   private openaiApiKey: string | null = null;
-  private geminiClient: GoogleGenerativeAI | null = null;
-  private geminiModel: GenerativeModel | null = null;
+  private geminiClient: GoogleGenerativeAI | null = null; // kept for compatibility
+  private geminiModel: GenerativeModel | null = null; // kept for compatibility
   private geminiApiKey: string | null = null;
-  private conversationHistory: ChatMessage[] = [];
-  private maxHistoryLength: number = 20; // Keep last 20 messages
+  // New provider wrappers
+  private openaiProvider?: OpenAIProvider;
+  private geminiProvider?: GeminiProvider;
+  private anthropicProvider?: AnthropicProvider;
+  private convo: ConversationManager;
+  private connectivity: Connectivity;
+  private processors?: AIProcessors;
 
   constructor() {
     this.logger = new Logger("AIService");
@@ -27,6 +40,10 @@ export class AIService {
       "AI Service initialized with provider:",
       config.ai.provider
     );
+
+    // Initialize core helpers
+    this.convo = new ConversationManager(this.logger, 20);
+    this.connectivity = new Connectivity(this.logger);
 
     // Initialize API keys if available
     this.openaiApiKey = config.ai.apiKey || process.env.OPENAI_API_KEY || null;
@@ -74,43 +91,22 @@ export class AIService {
    * Initialize OpenAI client
    */
   private initializeOpenAI(): void {
-    if (!this.openaiApiKey) return;
-
-    try {
-      this.openaiClient = new OpenAI({
-        apiKey: this.openaiApiKey,
-      });
-      this.logger.info("✅ OpenAI client initialized");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error(
-        "❌ Failed to initialize OpenAI client:",
-        new Error(errorMessage)
-      );
-    }
+    const { client, provider } = initOpenAI(this.logger, this.openaiApiKey);
+    this.openaiClient = client;
+    if (provider) this.openaiProvider = provider;
   }
 
   /**
    * Initialize Google Gemini client
    */
   private initializeGemini(): void {
-    if (!this.geminiApiKey) return;
-
-    try {
-      this.geminiClient = new GoogleGenerativeAI(this.geminiApiKey);
-      this.geminiModel = this.geminiClient.getGenerativeModel({
-        model: "gemini-1.5-flash", // Free tier model
-      });
-      this.logger.info("✅ Gemini client initialized");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error(
-        "❌ Failed to initialize Gemini client:",
-        new Error(errorMessage)
-      );
-    }
+    const { client, model, provider } = initGemini(
+      this.logger,
+      this.geminiApiKey
+    );
+    this.geminiClient = client;
+    this.geminiModel = model;
+    if (provider) this.geminiProvider = provider;
   }
 
   /**
@@ -130,6 +126,8 @@ export class AIService {
     if (anthropicKey) {
       this.anthropicApiKey = anthropicKey;
       this.logger.info("🔑 Anthropic API key updated");
+      const { provider } = initAnthropic(this.logger, this.anthropicApiKey);
+      if (provider) this.anthropicProvider = provider;
     }
 
     if (geminiKey) {
@@ -145,24 +143,7 @@ export class AIService {
    * Test basic internet connectivity
    */
   private async testInternetConnectivity(): Promise<boolean> {
-    try {
-      const response = await axios.get("https://api.openai.com/v1/models", {
-        timeout: 5000,
-        headers: {
-          "User-Agent": "GVAIBot/1.0.0",
-        },
-      });
-      return response.status === 401; // Should get 401 without API key, which means we can reach the API
-    } catch (error: any) {
-      if (error?.response?.status === 401) {
-        return true; // 401 means we can reach the API, just need auth
-      }
-      this.logger.error(
-        "❌ Internet connectivity test failed:",
-        new Error(error?.message || "Unknown error")
-      );
-      return false;
-    }
+    return this.connectivity.basicReachability();
   }
 
   /**
@@ -217,97 +198,39 @@ export class AIService {
           this.logger.error("❌ No Gemini API key configured");
           return false;
         }
-
-        // Ensure client is initialized
-        if (!this.geminiModel) {
-          this.initializeGemini();
-        }
-
-        if (!this.geminiModel) {
-          this.logger.error("❌ Failed to initialize Gemini client");
-          return false;
-        }
-
-        // Test Gemini connection with a simple request
-        this.logger.info("🔄 Testing Gemini connection...");
-        this.logger.info(`🔧 Using model: gemini-1.5-flash (free tier)`);
-
-        const result = await this.geminiModel.generateContent("Test");
-        const response = await result.response;
-        const text = response.text();
-
-        const success = !!text;
+        if (!this.geminiModel) this.initializeGemini();
+        const ok = await testGemini(
+          this.logger,
+          this.geminiModel,
+          this.geminiApiKey
+        );
         this.logger.info(
-          success
+          ok
             ? "✅ Gemini connection successful"
             : "❌ Gemini connection failed - no response"
         );
-        return success;
+        return ok;
       } else if (provider === "openai") {
-        if (!this.openaiApiKey) {
-          this.logger.error("❌ No OpenAI API key configured");
-          return false;
-        }
-
-        // Ensure client is initialized
-        if (!this.openaiClient) {
-          this.initializeOpenAI();
-        }
-
-        if (!this.openaiClient) {
-          this.logger.error("❌ Failed to initialize OpenAI client");
-          return false;
-        }
-
-        // Test OpenAI connection with a simple request
-        this.logger.info("🔄 Testing OpenAI connection...");
-        this.logger.info(`🔧 Using model: gpt-3.5-turbo (forced for testing)`);
-
-        const response = await this.openaiClient.chat.completions.create({
-          model: "gpt-3.5-turbo", // Force gpt-3.5-turbo for testing
-          messages: [{ role: "user", content: "Test" }],
-          max_tokens: 5,
-          temperature: 0,
-        });
-
-        const success = !!response.choices[0]?.message?.content;
+        if (!this.openaiClient) this.initializeOpenAI();
+        const ok = await testOpenAI(
+          this.logger,
+          this.openaiClient,
+          this.openaiApiKey
+        );
         this.logger.info(
-          success
+          ok
             ? "✅ OpenAI connection successful"
             : "❌ OpenAI connection failed - no response"
         );
-        return success;
+        return ok;
       } else if (provider === "anthropic") {
-        if (!this.anthropicApiKey) {
-          this.logger.error("❌ No Anthropic API key configured");
-          return false;
-        }
-
-        // Test Anthropic connection
-        this.logger.info("🔄 Testing Anthropic connection...");
-        const response = await axios.post(
-          "https://api.anthropic.com/v1/messages",
-          {
-            model: "claude-3-haiku-20240307",
-            max_tokens: 5,
-            messages: [{ role: "user", content: "Test" }],
-          },
-          {
-            headers: {
-              "Content-Type": "application/json",
-              "x-api-key": this.anthropicApiKey,
-              "anthropic-version": "2023-06-01",
-            },
-          }
-        );
-
-        const success = !!response.data?.content?.[0]?.text;
+        const ok = await testAnthropic(this.logger, this.anthropicApiKey);
         this.logger.info(
-          success
+          ok
             ? "✅ Anthropic connection successful"
             : "❌ Anthropic connection failed - no response"
         );
-        return success;
+        return ok;
       }
 
       this.logger.error(`❌ Unknown provider: ${provider}`);
@@ -382,16 +305,16 @@ export class AIService {
 
     try {
       // Add user message to conversation history
-      this.addToConversationHistory("user", message);
+      this.convo.add("user", message);
 
       // Check if we have API keys configured for any provider
-      const hasOpenAI = this.openaiApiKey && this.openaiClient;
-      const hasAnthropic = this.anthropicApiKey;
-      const hasGemini = this.geminiApiKey && this.geminiModel;
+      const hasOpenAI = !!this.openaiProvider && this.openaiProvider.isReady();
+      const hasAnthropic = !!this.anthropicApiKey;
+      const hasGemini = !!this.geminiProvider && this.geminiProvider.isReady();
 
       if (!hasOpenAI && !hasAnthropic && !hasGemini) {
-        const mockResponse = this.getMockResponse(message);
-        this.addToConversationHistory("assistant", mockResponse);
+        const mockResponse = getMockResponse(message);
+        this.convo.add("assistant", mockResponse);
         return mockResponse;
       }
 
@@ -411,23 +334,37 @@ export class AIService {
         provider = "anthropic";
       }
 
+      // Build processors facade (omit undefined providers)
+      const providers: {
+        openai?: OpenAIProvider;
+        anthropic?: AnthropicProvider;
+        gemini?: GeminiProvider;
+      } = {};
+      if (this.openaiProvider) providers.openai = this.openaiProvider;
+      if (this.anthropicProvider) providers.anthropic = this.anthropicProvider;
+      if (this.geminiProvider) providers.gemini = this.geminiProvider;
+      this.processors =
+        this.processors || new AIProcessors(this.logger, this.convo, providers);
+
       let response: string;
       switch (provider) {
         case "anthropic":
-          response = await this.processWithAnthropic();
+          response = await this.processors.withAnthropic(
+            this.anthropicApiKey || undefined
+          );
           break;
         case "openai":
-          response = await this.processWithOpenAI();
+          response = await this.processors.withOpenAI();
           break;
         case "gemini":
-          response = await this.processWithGemini();
+          response = await this.processors.withGemini();
           break;
         default:
           throw new Error(`Unsupported AI provider: ${provider}`);
       }
 
       // Add AI response to conversation history
-      this.addToConversationHistory("assistant", response);
+      this.convo.add("assistant", response);
       return response;
     } catch (error) {
       const errorMessage =
@@ -440,31 +377,7 @@ export class AIService {
   /**
    * Add message to conversation history
    */
-  private addToConversationHistory(
-    role: "user" | "assistant" | "system",
-    content: string
-  ): void {
-    const message: ChatMessage = {
-      id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      sessionId: "main_session",
-      content,
-      role,
-      timestamp: new Date(),
-    };
-
-    this.conversationHistory.push(message);
-
-    // Keep conversation history within limits
-    if (this.conversationHistory.length > this.maxHistoryLength) {
-      this.conversationHistory = this.conversationHistory.slice(
-        -this.maxHistoryLength
-      );
-    }
-
-    this.logger.info(
-      `💬 Added ${role} message to conversation history (${this.conversationHistory.length} messages total)`
-    );
-  }
+  // Conversation helpers now delegated to ConversationManager
 
   /**
    * Get conversation history for AI context
@@ -473,231 +386,29 @@ export class AIService {
     role: "user" | "assistant";
     content: string;
   }> {
-    return this.conversationHistory.map((msg) => ({
-      role: msg.role as "user" | "assistant",
-      content: msg.content,
-    }));
+    return this.convo.context();
   }
 
   /**
    * Clear conversation history
    */
   public clearConversationHistory(): void {
-    this.conversationHistory = [];
-    this.logger.info("🗑️ Conversation history cleared");
+    this.convo.clear();
   }
 
   /**
    * Get conversation history
    */
   public getConversationHistory(): ChatMessage[] {
-    return [...this.conversationHistory];
+    return this.convo.list();
   }
 
-  /**
-   * Process message with Anthropic Claude
-   */
-  private async processWithAnthropic(): Promise<string> {
-    if (!this.anthropicApiKey) {
-      throw new Error(
-        "Anthropic API key not configured. Please add your API key in settings."
-      );
-    }
-
-    try {
-      this.logger.info("🤖 Processing message with Anthropic Claude");
-
-      // Build messages array from conversation history
-      const messages = this.getConversationContext();
-
-      const response = await axios.post(
-        "https://api.anthropic.com/v1/messages",
-        {
-          model: config.ai.model || "claude-3-haiku-20240307",
-          max_tokens: 1500,
-          messages: messages,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": this.anthropicApiKey,
-            "anthropic-version": "2023-06-01",
-          },
-        }
-      );
-
-      const assistantMessage = response.data?.content?.[0]?.text;
-      if (!assistantMessage) {
-        throw new Error("No response received from Anthropic");
-      }
-
-      this.logger.info("✅ Anthropic response generated successfully");
-      return assistantMessage;
-    } catch (error: any) {
-      const errorMessage =
-        error?.response?.data?.error?.message ||
-        error?.message ||
-        "Unknown error";
-      this.logger.error("❌ Anthropic API error:", new Error(errorMessage));
-
-      // Provide helpful error messages for common issues
-      if (errorMessage.includes("authentication")) {
-        throw new Error(
-          "Invalid Anthropic API key. Please check your API key in settings."
-        );
-      } else if (errorMessage.includes("rate_limit")) {
-        throw new Error(
-          "Anthropic API rate limit exceeded. Please try again in a moment."
-        );
-      } else {
-        throw new Error(`Anthropic API error: ${errorMessage}`);
-      }
-    }
-  }
-
-  /**
-   * Process message with OpenAI
-   */
-  private async processWithOpenAI(): Promise<string> {
-    if (!this.openaiClient) {
-      throw new Error(
-        "OpenAI client not initialized. Please configure your API key."
-      );
-    }
-
-    try {
-      this.logger.info("🤖 Processing message with OpenAI GPT");
-
-      // Build messages array with system message and conversation history
-      const messages = [
-        {
-          role: "system" as const,
-          content:
-            "You are GVAIBot, a helpful AI assistant integrated into a desktop application. Provide helpful, accurate, and concise responses.",
-        },
-        ...this.getConversationContext(),
-      ];
-
-      const response = await this.openaiClient.chat.completions.create({
-        model: config.ai.model || "gpt-3.5-turbo",
-        messages: messages,
-        max_tokens: 1500,
-        temperature: 0.7,
-        stream: false,
-      });
-
-      const assistantMessage = response.choices[0]?.message?.content;
-      if (!assistantMessage) {
-        throw new Error("No response received from OpenAI");
-      }
-
-      this.logger.info("✅ OpenAI response generated successfully");
-      return assistantMessage;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error("❌ OpenAI API error:", new Error(errorMessage));
-
-      // Provide helpful error messages for common issues
-      if (errorMessage.includes("insufficient_quota")) {
-        throw new Error(
-          "OpenAI API quota exceeded. Please check your billing and usage limits."
-        );
-      } else if (errorMessage.includes("invalid_api_key")) {
-        throw new Error(
-          "Invalid OpenAI API key. Please check your API key in settings."
-        );
-      } else if (errorMessage.includes("rate_limit_exceeded")) {
-        throw new Error(
-          "OpenAI API rate limit exceeded. Please try again in a moment."
-        );
-      } else {
-        throw new Error(`OpenAI API error: ${errorMessage}`);
-      }
-    }
-  }
-
-  /**
-   * Process message with Google Gemini
-   */
-  private async processWithGemini(): Promise<string> {
-    if (!this.geminiModel) {
-      throw new Error(
-        "Gemini client not initialized. Please configure your API key."
-      );
-    }
-
-    try {
-      this.logger.info("🤖 Processing message with Google Gemini");
-
-      // Build conversation context for Gemini
-      const conversationContext = this.getConversationContext();
-      let prompt =
-        "You are GVAIBot, a helpful AI assistant integrated into a desktop application. Provide helpful, accurate, and concise responses.\n\n";
-
-      // Add conversation history
-      for (const msg of conversationContext) {
-        if (msg.role === "user") {
-          prompt += `Human: ${msg.content}\n\n`;
-        } else if (msg.role === "assistant") {
-          prompt += `Assistant: ${msg.content}\n\n`;
-        }
-      }
-
-      prompt += "Assistant: ";
-
-      const result = await this.geminiModel.generateContent(prompt);
-      const response = await result.response;
-      const assistantMessage = response.text();
-
-      if (!assistantMessage) {
-        throw new Error("No response received from Gemini");
-      }
-
-      this.logger.info("✅ Gemini response generated successfully");
-      return assistantMessage;
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Unknown error";
-      this.logger.error("❌ Gemini API error:", new Error(errorMessage));
-
-      // Provide helpful error messages for common issues
-      if (errorMessage.includes("API_KEY_INVALID")) {
-        throw new Error(
-          "Invalid Gemini API key. Please check your API key in settings."
-        );
-      } else if (errorMessage.includes("RATE_LIMIT_EXCEEDED")) {
-        throw new Error(
-          "Gemini API rate limit exceeded. Please try again in a moment."
-        );
-      } else if (errorMessage.includes("QUOTA_EXCEEDED")) {
-        throw new Error(
-          "Gemini API quota exceeded. Check your usage at https://makersuite.google.com/"
-        );
-      } else {
-        throw new Error(`Gemini API error: ${errorMessage}`);
-      }
-    }
-  }
+  // Provider-specific processing moved to AIProcessors
 
   /**
    * Get a mock response for testing without API keys
    */
-  private getMockResponse(message: string): string {
-    const responses = [
-      "🔑 Please configure your API keys to start chatting! Click the settings button (⚙️) in the top-right corner and add your Google Gemini, OpenAI, or Anthropic API key.",
-      "👋 Hello! I'm GVAIBot running in demo mode. To unlock real AI conversations, please add your API keys in the Settings panel.",
-      "🚀 Ready to chat with real AI? Configure your Google Gemini (FREE), OpenAI (GPT), or Anthropic (Claude) API key in Settings to get started!",
-      `💬 You said: "${message}"\n\n🔧 This is a demo response. Add your API keys in Settings to enable real AI conversations with Gemini, GPT, or Claude.`,
-    ];
-
-    const randomIndex = Math.floor(Math.random() * responses.length);
-    const response = responses[randomIndex];
-    if (!response) {
-      throw new Error("No mock response available");
-    }
-    return response;
-  }
+  // Mock responses moved to ./ai/core/mock
 
   /**
    * Execute a function call
