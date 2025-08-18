@@ -1,6 +1,6 @@
 # OctAIvius - AI Chatbot Electron Desktop Application
 
-Note: Desktop-first. The only supported renderer entry is the React app built via Vite at `src/renderer/react/index.html` (output to `dist/renderer`). Legacy pre-React HTML files are deprecated and removed from active use.
+Note: Desktop-first. The supported renderer is the React app built via Vite at `src/renderer/react/index.html` (output to `dist/renderer`). Legacy non-React HTML/CSS/JS under `src/renderer/{index.html, css, js}` aren’t used by the app.
 
 ## Overview
 
@@ -20,9 +20,9 @@ The application follows an Electron desktop architecture with the following key 
 - **MCP Integration**: Communication with Model Context Protocol servers
 - **AI Integration**: Claude/OpenAI integration for conversational AI
 
-### Project Structure (Post React Migration)
+### Project Structure (TypeScript + React/Vite)
 
-```
+```text
 GVAIBot/
 ├── src/
 │   ├── main.ts              # Electron main process (loads built React UI)
@@ -32,9 +32,9 @@ GVAIBot/
 │   ├── utils/               # Utility functions and helpers
 │   ├── types/               # Shared TypeScript types
 │   └── renderer/
-│       └── react/           # React frontend (Vite powered)
+│       └── react/           # React frontend (Vite)
 │           ├── components/  # UI components
-│           ├── hooks/       # Custom React hooks (IPC, etc.)
+│           ├── hooks/       # Custom React hooks (IPC, realtime)
 │           ├── styles/      # Global styles (CSS)
 │           ├── App.tsx      # Root application component
 │           ├── main.tsx     # React entry
@@ -46,7 +46,7 @@ GVAIBot/
 └── package.json
 ```
 
-Legacy Express server code, static `public/` assets, and vanilla renderer HTML/JS files were removed to simplify the codebase for an Electron + React only architecture.
+Legacy Express server code and static public assets are not used; Electron + React is the only active UI path.
 
 ## Features
 
@@ -64,12 +64,11 @@ Legacy Express server code, static `public/` assets, and vanilla renderer HTML/J
 - Mock AI responses (ready for real AI integration)
 - Responsive desktop UI with theme support
 
-### Voice Dictation
+### Voice
 
-- Web Speech API integration (client-side)
-- Planned audio file upload and processing
-- Multiple STT service support (in development)
-- Voice activity detection (planned)
+- Client mic capture in renderer; STT in main (Google or others when configured)
+- Realtime (OpenAI) support for S2S when enabled
+- VU meter and live transcript in the UI
 
 ### Function Calling
 
@@ -80,10 +79,9 @@ Legacy Express server code, static `public/` assets, and vanilla renderer HTML/J
 
 ### MCP Server Integration
 
-- Server discovery and connection management (in development)
-- Message routing and error handling
-- Streaming response support (planned)
-- Connection pooling and failover
+- Process-backed AMPP ClipPlayer MCP server (stdio)
+- Auto-connect on startup; schemas bootstrap and tools warm-up
+- Natural-language routing in main for common AMPP/ClipPlayer intents
 
 ## Security Features
 
@@ -114,8 +112,8 @@ npm install
 cp .env.example .env
 # Edit .env with your configuration
 
-# Build the application
-npm run build
+# Build the application (TS + React)
+npm run build:all
 
 # Start the Electron application
 npm start
@@ -151,22 +149,18 @@ The application uses environment variables for configuration. See the included `
 
 ## Current Status
 
-### ✅ Working Features
+### ✅ Working
 
-- Electron application launches with React UI
-- Chat interface using IPC backed AI service (mock/real provider integration)
-- Theme support (dark/light)
-- Voice recording hooks prepared (IPC wiring ready)
-- Configuration retrieval via preload bridge
-- Secure IPC + context isolation
-- Structured logging (Winston)
+- Electron app launches with React UI
+- Chat interface over IPC; provider routing (OpenAI/Gemini/Anthropic)
+- MCP auto-connect; tools list and NL routing
+- Realtime voice loop (when configured): VU meter, transcript chip, TTS playback
+- Secure IPC + context isolation; structured logging
 
-### 🚧 In Development
+### 🚧 In Progress
 
-- Full AI provider streaming responses
-- Transcription pipeline integration with voice service
-- MCP server function invocation UI
-- Settings persistence (enhanced) and key management UI
+- More robust error toasts and transcript-as-user bubble
+- Packaging polish and auto-updates
 
 ### 📋 Planned Features
 

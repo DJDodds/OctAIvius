@@ -1,6 +1,6 @@
 # GVAIBot - AI Chatbot Electron Desktop Application
 
-A comprehensive AI chatbot desktop application built with Electron, TypeScript, and modern web technologies, featuring voice dictation capabilities and Model Context Protocol (MCP) integration.
+A desktop-first AI chatbot built with Electron + TypeScript and a React/Vite renderer, featuring voice capabilities and Model Context Protocol (MCP) integration.
 
 ## 🌟 Key Features
 
@@ -18,20 +18,20 @@ A comprehensive AI chatbot desktop application built with Electron, TypeScript, 
 
 ### Electron Structure
 
-- **Main Process**: Handles window management, IPC, and system integration
-- **Renderer Process**: Frontend interface with secure communication bridge
-- **Preload Script**: Secure IPC bridge between main and renderer
-- **Configuration Management**: Centralized config with environment validation
-- **Services**: Modular services for AI, voice, and MCP integration
+- **Main Process**: TypeScript entry at `src/main.ts`; window lifecycle, IPC, services
+- **Renderer Process (React/Vite)**: TypeScript UI under `src/renderer/react` (built to `dist/renderer`)
+- **Preload Script**: `src/preload.ts` secure bridge (context isolation)
+- **Configuration Management**: `src/config/index.ts` (dotenv + validation)
+- **Services**: Modular services for AI, Voice, MCP under `src/services`
 
 ### Core Components
 
-- **Main Process** (`src/main.ts`): Application lifecycle and window management
-- **Preload Script** (`src/preload.ts`): Secure IPC communication bridge
-- **Renderer** (`src/renderer/`): Frontend HTML, CSS, and JavaScript
-- **Configuration** (`src/config/`): Environment validation and app settings
-- **Utilities** (`src/utils/`): Logging and helper functions
-- **Types** (`src/types/`): TypeScript type definitions
+- **Main Process** (`src/main.ts`): App lifecycle, window creation, IPC
+- **Preload Script** (`src/preload.ts`): Secure IPC surface (no Node in renderer)
+- **Renderer** (`src/renderer/react/`): React app (`main.tsx`, `App.tsx`, `index.html` template)
+- **Configuration** (`src/config/`): Env validation and app settings
+- **Utilities** (`src/utils/`): Logger and helpers
+- **Types** (`src/types/`): Shared TypeScript types
 
 ## 🚀 Quick Start
 
@@ -101,41 +101,35 @@ The application window will open automatically.
 
 ```
 GVAIBot/
-├── src/                          # Source code
-│   ├── main.ts                   # Main Electron process
-│   ├── preload.ts                # Secure IPC bridge
-│   ├── config/                   # Configuration management
-│   │   └── index.ts             # Environment validation and config
-│   ├── types/                    # TypeScript type definitions
-│   │   └── index.ts             # All application interfaces
-│   ├── middleware/               # Express middleware (legacy)
-│   │   └── index.ts             # Authentication, validation, security
-│   ├── utils/                    # Utility functions
-│   │   ├── logger.ts            # Winston logging configuration
-│   │   └── index.ts             # General utility functions
-│   ├── services/                 # Service modules (in development)
-│   │   ├── aiService.ts         # AI provider integration
-│   │   ├── voiceService.ts      # Voice processing
-│   │   └── mcpService.ts        # MCP integration
-│   └── renderer/                 # Frontend assets
-│       ├── index.html           # Main HTML interface
-│       ├── css/                 # Stylesheets
-│       │   └── main.css        # Main CSS with theme support
-│       └── js/                  # JavaScript modules
-│           ├── config.js       # Client configuration
-│           └── utils.js        # Client utilities
-├── dist/                        # Compiled JavaScript (generated)
-├── release/                     # Built Electron packages (generated)
-├── assets/                      # Application assets (icons, etc.)
-├── logs/                        # Application logs
-├── uploads/                     # File uploads
-├── temp/                        # Temporary files
-├── quarantine/                  # Quarantined files
-├── .env                         # Environment variables
-├── package.json                 # Dependencies and scripts
-├── tsconfig.json               # TypeScript configuration
-└── README.md                   # This file
+├── src/
+│   ├── main.ts                 # Electron main process (TS)
+│   ├── preload.ts              # Secure IPC bridge (TS)
+│   ├── config/
+│   │   └── index.ts            # Env loading + validation
+│   ├── services/               # AI, Voice, MCP services (TS)
+│   ├── utils/                  # Logger + helpers (TS)
+│   ├── types/                  # Shared TS types
+│   └── renderer/
+│       └── react/              # React + Vite app (TS)
+│           ├── main.tsx        # React entry
+│           ├── App.tsx         # Root component
+│           ├── index.html      # Vite HTML template
+│           ├── components/     # UI components
+│           ├── hooks/          # Custom hooks (IPC, realtime)
+│           └── styles/         # Global styles
+├── dist/                       # Built main/preload + dist/renderer (Vite)
+├── assets/                     # Icons and app assets
+├── logs/                       # Runtime logs
+├── .env                        # Environment variables
+├── package.json                # Scripts and dependencies
+├── tsconfig.json               # TypeScript config
+└── README.md                   # Project docs
 ```
+
+Notes
+
+- The supported renderer is the React/Vite app under `src/renderer/react`.
+- Legacy static files under `src/renderer/{index.html, css, js}` remain for reference but aren’t used by the app.
 
 ## 🔧 Configuration
 
@@ -157,12 +151,13 @@ GVAIBot/
 
 ### Electron-Specific Configuration
 
-The application includes Electron-specific configurations in `package.json`:
+Electron runs the compiled JavaScript from TypeScript sources:
 
-- **Main Entry**: `dist/main.js`
-- **Build Configuration**: Electron Builder setup for packaging
-- **Security**: Content Security Policy and context isolation
-- **Platform Support**: Windows, macOS, and Linux builds
+- **Main TypeScript Entry**: `src/main.ts` (compiles to `dist/main.js`)
+- **Preload TypeScript Entry**: `src/preload.ts` (compiles to `dist/preload.js`)
+- **Renderer Build**: React/Vite bundles to `dist/renderer`
+- **Packaging**: Electron Builder config in `package.json`
+- **Security**: CSP + contextIsolation enabled
 
 ## 🎯 Development Status
 
@@ -230,11 +225,12 @@ The application includes Electron-specific configurations in `package.json`:
 
 ### Available Scripts
 
-- `npm run build` - Compile TypeScript to JavaScript
-- `npm start` - Build and start the Electron application
-- `npm run dev` - Start development mode with hot reload (planned)
+- `npm run build` - Compile TypeScript (main/preload)
+- `npm run build:react` - Build the React renderer with Vite
+- `npm run build:all` - Build TS + React in one go
+- `npm start` - Build all and launch Electron
 - `npm run pack` - Package the app for the current platform
-- `npm run dist` - Build distributable packages for all platforms
+- `npm run dist` - Build distributables for all platforms
 - `npm run clean` - Clean the dist directory
 
 ### Development Workflow
@@ -256,11 +252,12 @@ The application includes Electron-specific configurations in `package.json`:
 
 ### AI Providers
 
-The application supports multiple AI providers:
+Multiple providers are supported:
 
-- **Anthropic Claude**: Configure with `ANTHROPIC_API_KEY`
-- **OpenAI GPT**: Configure with `OPENAI_API_KEY`
-- **Mock Responses**: For testing without API keys
+- **OpenAI**: `OPENAI_API_KEY` (default when `AI_PROVIDER=openai`)
+- **Gemini**: `GEMINI_API_KEY` (when `AI_PROVIDER=gemini`)
+- **Anthropic**: `ANTHROPIC_API_KEY` (when `AI_PROVIDER=anthropic`)
+- Mock responses are used when no provider is configured
 
 ### Voice Processing
 
@@ -272,11 +269,11 @@ Planned integration with:
 
 ### Model Context Protocol (MCP)
 
-The application is architected to support MCP servers:
+The app integrates an AMPP ClipPlayer MCP server and supports additional MCP servers via stdio:
 
-- **MCP Client**: Ready for server connections
-- **Function Calling**: Prepared for tool integration
-- **Dynamic Capabilities**: Extensible AI functionality
+- **MCP Client**: Process-backed stdio server with JSON-RPC
+- **Auto-connect**: AMPP server registers and connects on startup
+- **Tools**: Listed and callable from the MCP Panel and via NL routing
 
 ## 📊 Logging
 
@@ -320,7 +317,7 @@ The application is designed for comprehensive testing:
 ### Development Build
 
 ```bash
-npm run build && npm start
+npm run build:all && npm start
 ```
 
 ### Production Package
