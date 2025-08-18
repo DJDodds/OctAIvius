@@ -15,16 +15,16 @@ If your Markdown viewer doesn’t render Mermaid blocks (```mermaid):
 
 ```mermaid
 flowchart LR
-  U[User] --> R[Renderer (React)]
-  R --> P[Preload bridge]
-  P --> M[Main (Electron)]
-  M --> AIS[AIService]
-  M --> MCPS[MCPService]
-  M --> VS[VoiceService]
-  AIS --> AIP[Providers<br/>(OpenAI/Gemini/Anthropic)]
-  MCPS --> CH[MCPChild<br/>(stdio transport)]
-  CH --> Srv[Clip Player MCP<br/>(child process)]
-  VS --> GCP[Google Speech-to-Text]
+  U(User) --> R(Renderer React)
+  R --> P(Preload bridge)
+  P --> M(Main Electron)
+  M --> AIS(AIService)
+  M --> MCPS(MCPService)
+  M --> VS(VoiceService)
+  AIS --> AIP(Providers: OpenAI/Gemini/Anthropic)
+  MCPS --> CH(MCPChild stdio)
+  CH --> Srv(Clip Player MCP)
+  VS --> GCP(Google Speech-to-Text)
 ```
 
 Key boundaries
