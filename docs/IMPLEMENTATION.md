@@ -1,161 +1,98 @@
-# AI Chatbot Implementation Documentation
+# OctAIvius Implementation Documentation
 
-## Update — 2025-08-12
+This document describes the current implementation of OctAIvius, a desktop-first Electron application with a React renderer. It integrates AI chat, voice dictation, and Model Context Protocol (MCP) tooling with natural‑language routing. Content assumes familiarity with TypeScript, Electron, and React.
 
-This app was updated to fully wire up MCP connectivity, expose tools in the UI automatically, and let you invoke MCP tools directly from chat with suggestions.
+## Architecture overview
 
-Highlights
+- Electron main bootstraps services (AI, Voice, MCP) and manages a frameless BrowserWindow that loads the Vite-built React UI.
+- A local MCP server (Clip Player) is registered and auto‑connected on startup; schema bootstrap and tools warm‑up occur automatically.
+- Chat supports natural‑language MCP requests (no slash needed). A minimal slash suggestion UX exists when typing `/`, if suggestions are available.
+- Voice MVP: push‑to‑talk in the renderer, STT in main, optional TTS playback for assistant replies.
+- Strict security posture: context isolation, a preload bridge, and a CSP that permits data/blob images for SVG assets.
 
-- Reliable MCP stdio transport and handshake
-
-  - The Electron main process now spawns the compiled MCP server via Node for clean stdio: `gv-ampp-clipplayer-mcp/out/index.js`.
-  - Implements proper MCP initialize with retries and robust framing (CRLF/LF tolerant) in `src/services/mcpService.ts`.
-  - Auto-connect to the `clipplayer` server on app ready and broadcast status to renderer via `mcp:servers-updated` in `src/main.ts`.
-  - Renderer subscribes and auto-fetches tools on “connected” in `src/renderer/react/hooks/useMCP.ts`.
-
-- Chat slash-commands for MCP
-
-  - You can run tools straight from chat using:
-    - `/mcp tools` – list available tools
-    - `/mcp <toolName> {jsonArgs}` – invoke a tool
-    - `/clip <toolName> {jsonArgs}` – alias for `/mcp`
-  - Implemented in the `chat:send-message` IPC handler in `src/main.ts`. It auto-connects the MCP server if needed and returns the result as the assistant message.
-
-- Input suggestions (typeahead)
-  - As you type `/`, the chat input suggests:
-    - Base commands: `/mcp tools`, `/mcp <tool> {args}`, `/clip <tool> {args}`
-    - Tool names from the connected server with a JSON args template derived from each tool’s schema.
-  - Keyboard: Up/Down to navigate, Tab or Enter to accept. Enter still sends when suggestions are closed.
-  - Implemented in `src/renderer/react/components/MessageInput.tsx`.
-
-Quick usage
-
-- See tools in UI: open the MCP panel (header button). The `Clip Player` server auto-connects and lists tools.
-- Invoke from chat:
-  - `/mcp tools`
-  - `/mcp get_state`
-  - `/mcp play_pause`
-  - `/mcp set_rate {"rate":1}`
-  - `/mcp transport_state {"state":"pause"}`
-
-Where to look (key files)
-
-- `src/main.ts`
-  - Registers and auto-connects `clipplayer`
-  - Broadcasts `mcp:servers-updated`
-  - Adds slash-command routing inside `chat:send-message`
-- `src/services/mcpService.ts`
-  - Child process spawning (Node on compiled `out/index.js`)
-  - Robust JSON-RPC framing + initialize loop
-  - `tools/list` and `tools/call` wrappers
-- `src/preload.ts` — exposes MCP IPC to renderer, plus `onServersUpdated`
-- `src/renderer/react/hooks/useMCP.ts` — subscribes and auto-fetches tools
-- `src/renderer/react/components/MessageInput.tsx` — chat typeahead suggestions
-
-Config notes
-
-- The MCP server path is auto-detected to `C:/Users/.../gv-ampp-clipplayer-mcp/out/index.js` and spawned with `node`. If the compiled output isn’t present, the fallback `npm run start` may be used (not recommended for stdio).
-- Initialize timeout defaults to 60s for first boot (`initTimeoutMs`).
-
-Troubleshooting
-
-- No tools in UI: check app logs for `-> initialize` followed by `<- response initialize OK`. Verify `gv-ampp-clipplayer-mcp` has been built (tsc) and `.env` is correct.
-- Chat command parse error: ensure JSON args are valid (e.g., `{ "rate": 1 }`). The chat will return a parse error if not.
-- Too verbose logs: reduce logging level in `src/utils/logger.ts` via config.
-
-## Overview
-
-This document provides a comprehensive step-by-step guide for implementing the AI Chatbot with Express, Dictation & MCP Integration based on the provided instructions. The application has been built with a modular architecture, comprehensive error handling, and extensive documentation.
-
-## Implementation Progress
-
-### ✅ Completed Components
-
-#### 1. Project Structure & Configuration
-
-- **Package.json**: Complete dependencies and scripts for development and production
-- **TypeScript Configuration**: Strict TypeScript setup with path aliases and proper type checking
-- **Environment Configuration**: Comprehensive config management with validation using Joi
-- **Documentation**: README.md with detailed setup and feature overview
-
-## GVAIBot — Implementation (Desktop-first, Electron + React)
-
-Last updated: 2025-08-13
-
-This document describes the current implementation of GVAIBot as a desktop-first Electron app with a React renderer, integrated MCP tooling, slash-command chat UX, typeahead suggestions, and a voice MVP. Content assumes familiarity with TypeScript/Electron/React.
-
-### High-level
-
-- Electron main bootstraps services (AI, Voice, MCP) and manages a single BrowserWindow loading the Vite-built React app.
-- A local MCP server (Clip Player) is registered and auto-connected at startup; tools are broadcast to the renderer.
-- Chat supports `/mcp` slash-commands and dynamic typeahead for tools and JSON arg templates.
-- Voice MVP: push-to-talk recording in renderer, STT request via main, TTS playback for assistant replies.
-- Renderer bundle is code-split (lazy panels and dynamic suggestion engine) for faster initial load.
-
-### Key paths
+## Key paths
 
 - Main process: `src/main.ts`, `src/preload.ts`
 - Services: `src/services/{aiService.ts, voiceService.ts, mcpService.ts}`
+  - AI core modules: `src/services/ai/core/{conversation.ts, connectivity.ts, processors.ts, init.ts, tests.ts, mock.ts}`
+  - Voice STT helper: `src/services/voice/sttGoogle.ts`
+  - MCP transport/types/bootstrap: `src/services/mcp/{child.ts, types.ts, bootstrap.ts}`
 - Renderer (React): `src/renderer/react/**/*` (entry: `index.html` + `main.tsx`)
-- Legacy renderer globals (desktop context only): `src/renderer/js/{config.ts, utils.ts}`
+- Components: `src/renderer/react/components/*` (Header, MCPPanel, SettingsPanel, ChatContainer, MessageInput, etc.)
 
-### MCP integration
+## MCP integration
 
-- Main registers `clipplayer` from `C:/Users/.../gv-ampp-clipplayer-mcp/out/index.js` (compiled). If not present, a fallback npm script can be used but stdio noise may affect framing.
-- `mcpService` spawns the child process with clean stdio, performs `initialize` with retries, and implements robust Content-Length framing tolerant of CRLF/LF.
-- On app ready, main auto-connects the server and emits `mcp:servers-updated`; renderer listens and fetches tools.
-- Tools are available in a dedicated MCP panel and via chat commands.
+- Main registers `clipplayer` from `C:/Users/.../gv-ampp-clipplayer-mcp/out/index.js` (compiled). If not present, it can fall back to an npm script, but compiled output is preferred for clean stdio.
+- `MCPChild` (`src/services/mcp/child.ts`) spawns the child process, performs an `initialize` handshake with retries, and implements robust Content‑Length framing tolerant of CRLF/LF. Non‑protocol output is tolerated and trimmed.
+- Auto‑connect on window ready; status is broadcast via `mcp:servers-updated`. After connect, schemas are refreshed once per server (deduped) via `bootstrapSchemasOnce`, and `tools/list` is warmed to prime the UI.
+- Calling tools: `mcpService.callFunction(serverId, tool, args)` routes to the child via `tools/call`. Return normalization favors `result.content[0].text` when present.
 
-Renderer UX details:
+### Natural‑language routing (main process)
 
-- Slash-commands: `/mcp tools`, `/mcp <tool> {json}`, and `/clip` alias.
-- Suggestion engine (dynamically imported) fetches tools and derives JSON templates from tool input schemas.
-- Panels (MCPPanel, SettingsPanel) are lazy-loaded to reduce initial JS.
+In `chat:send-message` (main), common AMPP and Clip Player intents are recognized via regex and routed to MCP:
 
-### Voice MVP
+- AMPP discovery and schemas
+  - “list all application types” → `ampp_list_application_types`
+  - “get the schemas for <app>” → refresh + `ampp_list_commands_for_application`
+  - “list the commands for <app>” → `ampp_list_commands_for_application`
+  - “show the schema for <app>.<command>” → `ampp_show_command_schema`
+  - “suggest a payload for <app>.<command>” → `ampp_suggest_payload`
+  - “list workloads for <app>” / “list workloads” → `ampp_list_workloads` / `ampp_list_all_workloads`
+  - “list clip players” → `ampp_list_clip_players`
+  - Active workload: set/get for a given app → `set_active_workload` / `get_active_workload`
+  - Invoke and control messages: `ampp_invoke`, `ampp_send_control_message`
 
-- Renderer captures mic via MediaRecorder (WebM/Opus); barge-in cancels TTS when recording starts.
-- Main `voiceService` accepts buffers, diagnoses container/size, and calls Google STT REST for `WEBM_OPUS` when configured. Errors surface to chat; no mock transcripts.
-- Assistant replies can be spoken via Web Speech API (renderer) when voice is enabled.
+- Clip Player controls
+  - “play”, “pause”, “seek 100”, “set rate 2”, “shuttle -4”, “go to start/end”, “step forward/back”, “mark in/out”, “loop”, “get state”, “clear assets”, and composite transport commands map to their corresponding tools (`play_pause`, `seek`, `set_rate`, `shuttle`, `goto_start`, `goto_end`, `step_forward`, `step_back`, `mark_in`, `mark_out`, `loop`, `get_state`, `clear_assets`, `transport_command`, `transport_state`).
 
-### Desktop-first design
+- Guidance fallback
+  - If MCP intent is detected but no specific pattern matches, main returns a brief help list of supported commands instead of falling back to a generic AI answer.
 
-- UI scales for desktop resolutions; mobile-specific code/HTML has been removed. The app is intended for desktop Electron use.
-- The only renderer entry is the Vite React app (`src/renderer/react/index.html`). Legacy pre-React HTML entry files were removed.
+## Renderer UX
 
-### Notable files
+- Header: frameless window with a draggable header, no‑drag controls, and an OctAIvius SVG icon. Connection/MCP loading status pills show current state; Close button uses `window:close` IPC.
+- Chat: normal messages and voice transcriptions appear in the thread; a first‑run welcome message says “Hi, I’m OctAIvius…”. When MCP connects, a short “bootstrapping schemas…” notice is shown and later replaced with a confirmation after tools are loaded.
+- Slash suggestions: when typing `/`, a small suggestions menu may appear. The list is generated on demand from the connected server’s tools. Keyboard: Up/Down, Tab/Enter to accept. Implementation triggers are inside `MessageInput.tsx` and lazily import a local suggestion module when present.
 
-- `src/main.ts` — BrowserWindow lifecycle, IPC handlers, MCP server registration/auto-connect, slash-command router inside `chat:send-message`.
-- `src/services/mcpService.ts` — child process spawn, handshake, Content-Length parser, `tools/list` and `tools/call` helpers.
-- `src/services/voiceService.ts` — audio diagnostics, STT call with strict error behavior (no mock), `WEBM_OPUS` config.
-- `src/renderer/react/components/MessageInput.tsx` — typeahead + mic record controls; surfaces STT errors to chat.
-- `src/renderer/react/utils/suggestionEngine.ts` — dynamic import; tool suggestions and JSON templates.
-- `src/renderer/react/App.tsx` — TTS for assistant replies when voice enabled; lazy-loaded panels.
-- `src/renderer/js/config.ts` and `src/renderer/js/utils.ts` — globals (window.AppConfig, window.Utils) for any legacy desktop HTML/scripts; typed and compiled.
+## AI service
 
-### Development
+- `aiService.ts` orchestrates providers and conversation, delegating to core modules:
+  - Conversation history and helpers (`conversation.ts`)
+  - Connectivity tests (`connectivity.ts` and `tests.ts`)
+  - Provider initialization (`init.ts`)
+  - Providers and processing (`processors.ts` with OpenAI/Gemini/Anthropic)
+  - Optional mock responses (`mock.ts`)
 
-- Build all: `npm run build:all` (tsc + vite build)
+## Voice
+
+- Renderer records audio via MediaRecorder (WebM/Opus). Main processes audio buffers and calls Google STT (REST) when configured (`WEBM_OPUS`). Errors are surfaced to chat. Assistant replies can be spoken using Web Speech API when enabled.
+
+## Security
+
+- Context isolation with a minimal preload bridge (`preload.ts`). No Node.js APIs in the renderer.
+- Content Security Policy: `img-src 'self' data: blob:` to allow SVGs and potential blob assets; scripts/styles restricted to self with inline allowances consistent with Electron’s renderer.
+
+## Development
+
+- Build all: `npm run build:all` (tsc + Vite)
 - Start Electron: `npm run start`
-- Dev renderer (optional): `npm run dev:react` (serves React; still launch Electron for full flow)
-- Type-check: `npm run type-check`
+- Dev renderer only: `npm run dev:react` (launch Electron for full flow)
+- Type‑check: `npm run type-check`
 
-### Adding another MCP server (summary)
+## Adding another MCP server
 
-1. Register a server in `src/main.ts` via `mcpService.registerServerConfig({ id, name, command, args, cwd })`.
-2. Ensure the server writes only JSON-RPC to stdout and logs to stderr.
-3. Optionally auto-connect on app ready and broadcast `mcp:servers-updated`.
-4. Renderer will list it in the MCP panel; slash-commands will route to it if you add parsing rules.
+1. Register a server via `mcpService.registerServerConfig({ id, name, command, args, cwd, env, initTimeoutMs, restartBackoffMs, autoRestart })` in `src/main.ts`.
+2. Ensure the server prints only JSON‑RPC on stdout; use stderr for logs. Provide a `readyPattern` if available for faster initialize.
+3. Auto‑connect on ready and broadcast `mcp:servers-updated` so the renderer can reflect status and warm the tool list.
 
-### Troubleshooting
+## Troubleshooting
 
-- Initialization stuck: ensure the MCP server is compiled and started with Node; confirm no stdout noise. Look for initialize request/response in logs.
-- Slash-command JSON errors: confirm valid JSON after the tool name (e.g., `{ "rate": 1 }`).
-- STT errors: check voice logs; verify audio container (webm/opus) and Google credentials.
+- Initialization/connection: Verify the MCP server is compiled and started with Node, and that stdout is clean. Look for `-> initialize` and `<- response initialize OK` in logs.
+- Natural‑language routing: If queries look MCP‑related but don’t match a pattern, the app replies with a short guidance list; rephrase to one of the suggested forms.
+- Tools list slow: logs will note when `tools/list` exceeds a few seconds. It still completes and will prime the UI.
+- Voice STT: Confirm audio type is WebM/Opus and Google credentials are set.
 
-### Recent changes (2025-08-13)
+## Notes
 
-- Ported legacy `src/renderer/js/{config.js, utils.js}` to TypeScript with global window assignments; type-checked.
-- Split renderer bundles (React.lazy and dynamic import) to reduce initial load size.
-- Hardened voice path (no mock transcripts; surfacing explicit errors to chat).
-- Confirmed desktop-first: removed obsolete pre-React HTML entry points.
+- Renderer entry is the React Vite app at `src/renderer/react/index.html` (output under `dist/renderer`). Legacy, non‑React HTML is deprecated and not used by the app.
+- Branding: the header icon and welcome message use the OctAIvius name.
