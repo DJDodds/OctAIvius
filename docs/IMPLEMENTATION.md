@@ -32,6 +32,7 @@ This document describes the current implementation of OctAIvius, a desktop-first
 In `chat:send-message` (main), common AMPP and Clip Player intents are recognized via regex and routed to MCP:
 
 - AMPP discovery and schemas
+
   - “list all application types” → `ampp_list_application_types`
   - “get the schemas for <app>” → refresh + `ampp_list_commands_for_application`
   - “list the commands for <app>” → `ampp_list_commands_for_application`
@@ -43,6 +44,7 @@ In `chat:send-message` (main), common AMPP and Clip Player intents are recognize
   - Invoke and control messages: `ampp_invoke`, `ampp_send_control_message`
 
 - Clip Player controls
+
   - “play”, “pause”, “seek 100”, “set rate 2”, “shuttle -4”, “go to start/end”, “step forward/back”, “mark in/out”, “loop”, “get state”, “clear assets”, and composite transport commands map to their corresponding tools (`play_pause`, `seek`, `set_rate`, `shuttle`, `goto_start`, `goto_end`, `step_forward`, `step_back`, `mark_in`, `mark_out`, `loop`, `get_state`, `clear_assets`, `transport_command`, `transport_state`).
 
 - Guidance fallback

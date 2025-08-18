@@ -248,7 +248,7 @@ class GVAIBotApp {
     });
 
     // Chat handler using AI service
-  ipcMain.handle("chat:send-message", async (event, message: string) => {
+    ipcMain.handle("chat:send-message", async (event, message: string) => {
       try {
         logger.info("💬 Processing chat message:", message);
 
@@ -328,7 +328,9 @@ class GVAIBotApp {
         if (
           (m = message.match(/get (?:me )?(?:the )?schemas for\s+([\w.-]+)/i))
         ) {
-          logger.info("🧩 NL route -> ampp_list_commands_for_application", { app: m[1] });
+          logger.info("🧩 NL route -> ampp_list_commands_for_application", {
+            app: m[1],
+          });
           const app = m[1];
           try {
             await ensureServer(serverId);
@@ -343,7 +345,9 @@ class GVAIBotApp {
           });
         }
         if ((m = message.match(/list (?:the )?commands for\s+([\w.-]+)/i))) {
-          logger.info("🧩 NL route -> ampp_list_commands_for_application", { app: m[1] });
+          logger.info("🧩 NL route -> ampp_list_commands_for_application", {
+            app: m[1],
+          });
           return await call("ampp_list_commands_for_application", {
             applicationType: m[1],
           });
@@ -351,7 +355,10 @@ class GVAIBotApp {
         if (
           (m = message.match(/show (?:the )?schema for\s+([\w.-]+)\.(\w+)/i))
         ) {
-          logger.info("🧩 NL route -> ampp_show_command_schema", { app: m[1], command: m[2] });
+          logger.info("🧩 NL route -> ampp_show_command_schema", {
+            app: m[1],
+            command: m[2],
+          });
           return await call("ampp_show_command_schema", {
             applicationType: m[1],
             command: m[2],
@@ -360,7 +367,10 @@ class GVAIBotApp {
         if (
           (m = message.match(/suggest (?:a )?payload for\s+([\w.-]+)\.(\w+)/i))
         ) {
-          logger.info("🧩 NL route -> ampp_suggest_payload", { app: m[1], command: m[2] });
+          logger.info("🧩 NL route -> ampp_suggest_payload", {
+            app: m[1],
+            command: m[2],
+          });
           return await call("ampp_suggest_payload", {
             applicationType: m[1],
             command: m[2],
@@ -383,7 +393,9 @@ class GVAIBotApp {
           return await call("ampp_list_clip_players");
         }
         if ((m = message.match(/set clipplayer workload to\s+([\w-]+)/i))) {
-          logger.info("🧩 NL route -> set_clipplayer_workload", { workloadId: m[1] });
+          logger.info("🧩 NL route -> set_clipplayer_workload", {
+            workloadId: m[1],
+          });
           return await call("set_clipplayer_workload", { workloadId: m[1] });
         }
         if (/get clipplayer workload/i.test(message)) {
@@ -395,7 +407,10 @@ class GVAIBotApp {
             /set active workload for\s+([\w.-]+)\s+to\s+([\w-]+)/i
           ))
         ) {
-          logger.info("🧩 NL route -> set_active_workload", { app: m[1], workloadId: m[2] });
+          logger.info("🧩 NL route -> set_active_workload", {
+            app: m[1],
+            workloadId: m[2],
+          });
           return await call("set_active_workload", {
             applicationType: m[1],
             workloadId: m[2],
@@ -427,7 +442,11 @@ class GVAIBotApp {
           ))
         ) {
           const { obj } = extractJson(message);
-          logger.info("🧩 NL route -> ampp_send_control_message", { workloadId: m[1], app: m[2], schema: m[3] });
+          logger.info("🧩 NL route -> ampp_send_control_message", {
+            workloadId: m[1],
+            app: m[2],
+            schema: m[3],
+          });
           return await call("ampp_send_control_message", {
             workloadId: m[1],
             applicationType: m[2],
@@ -531,8 +550,14 @@ class GVAIBotApp {
         }
 
         // If message looks MCP-related but didn't match a specific pattern, provide guidance
-        if (/(\bampp\b|clip ?player|workload|schema|schemas|macro|transport|play\b|pause\b|seek\b|rate\b|shuttle\b)/i.test(message)) {
-          logger.info("ℹ️ MCP intent detected but no specific NL pattern matched; returning guidance.");
+        if (
+          /(\bampp\b|clip ?player|workload|schema|schemas|macro|transport|play\b|pause\b|seek\b|rate\b|shuttle\b)/i.test(
+            message
+          )
+        ) {
+          logger.info(
+            "ℹ️ MCP intent detected but no specific NL pattern matched; returning guidance."
+          );
           return await mcpGuidance();
         }
 

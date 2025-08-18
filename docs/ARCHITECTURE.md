@@ -16,26 +16,25 @@ If your Markdown viewer doesn’t render Mermaid blocks (```mermaid):
 ```mermaid
 flowchart LR
   U[User] --> R[Renderer (React)]
-  R -- invoke --> P[Preload bridge]
+  R --> P[Preload bridge]
   P --> M[Main (Electron)]
-  M -->|AI requests| AIS[AIService]
-  M -->|MCP routing| MCPS[MCPService]
-  M -->|Voice STT| VS[VoiceService]
-  AIS --> AIP[Providers\n(OpenAI/Gemini/Anthropic)]
-  MCPS --> CH[MCPChild\n(stdio transport)]
-  CH --> Srv[Clip Player MCP\n(child process)]
+  M --> AIS[AIService]
+  M --> MCPS[MCPService]
+  M --> VS[VoiceService]
+  AIS --> AIP[Providers<br/>(OpenAI/Gemini/Anthropic)]
+  MCPS --> CH[MCPChild<br/>(stdio transport)]
+  CH --> Srv[Clip Player MCP<br/>(child process)]
   VS --> GCP[Google Speech-to-Text]
-
-  classDef b fill:#1f2937,stroke:#64748b,color:#fff;
-  class R,P,M,AIS,MCPS,VS,CH b
 ```
 
 Key boundaries
+
 - Renderer has no Node access; it talks to Main via the preload bridge (context isolation).
 - Main owns OS/process operations, AI/MCP/Voice services, and IPC handlers.
 - MCP servers run as separate child processes over JSON‑RPC (stdio) via MCPChild.
 
 ## Core components
+
 - Renderer (React): chat UI, header (frameless controls), settings, MCP panel.
 - Preload: exposes safe APIs (chat, ai, mcp, voice, conversation, app, windowCtrl).
 - Main: creates BrowserWindow, handles IPC, auto‑connects MCP, and routes chat to AI or MCP.
@@ -76,6 +75,7 @@ sequenceDiagram
 ```
 
 Notes
+
 - If intent is MCP‑related but no pattern matches, Main returns a short help list instead of falling back to AI.
 - After initial connect, schemas are auto‑refreshed once and tools are warmed (tools/list) for faster UX.
 
@@ -157,6 +157,7 @@ sequenceDiagram
 ## IPC, contracts, and errors
 
 IPC channels (preload ↔ main)
+
 - chat:send-message(text) → { success, response? , error? }
 - conversation:get-history → { success, history? }
 - conversation:clear → { success }
@@ -170,16 +171,19 @@ IPC channels (preload ↔ main)
 - app:get-config → { success, config }
 
 Common error modes
+
 - MCP unavailable/slow: initialize or tools/list can time out; logs will show warnings and retries. Guidance fallback helps users rephrase.
 - STT failures: surfaced as assistant error text; media capture errors are reported and tracks are cleaned up.
 - Provider errors: AIService returns an error string; renderer displays a friendly message.
 
 ## Security and windowing
+
 - Context isolation; only the preload bridge is exposed.
 - CSP allows image data/blob for SVG icons; scripts/styles limited to self with minimal inline where required by framework.
 - Frameless window; header area is draggable and controls are marked no‑drag; Close handled via IPC in main.
 
 ## Where things live
+
 - Main and preload: `src/main.ts`, `src/preload.ts`
 - Services
   - AI: `src/services/aiService.ts` + `src/services/ai/core/*`
@@ -190,6 +194,7 @@ Common error modes
   - UI: `src/renderer/react/components/*`
 
 ## Tips
+
 - Natural‑language MCP is handled entirely in main’s chat handler—regex first, then MCP guidance fallback, and only then AI.
 - Keep MCP servers compiled and clean on stdout. Use stderr for logs.
 - The first successful MCP connection will automatically refresh schemas and warm the tool list.
