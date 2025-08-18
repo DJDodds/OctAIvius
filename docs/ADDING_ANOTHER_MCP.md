@@ -1,6 +1,6 @@
 # Adding Another MCP Server to GVAIBot
 
-This guide explains how to integrate an additional MCP server (process-backed, stdio) into GVAIBot so it appears in the MCP panel and can be invoked similarly to the existing Clip Player MCP.
+This guide explains how to integrate an additional MCP server (process-backed, stdio) into GVAIBot so it appears in the MCP panel and can be invoked similarly to the existing AMPP MCP Server.
 
 ## Prerequisites
 

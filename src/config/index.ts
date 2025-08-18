@@ -45,7 +45,7 @@ const envSchema = Joi.object({
   // AI service configuration
   AI_PROVIDER: Joi.string()
     .valid("anthropic", "openai", "gemini")
-    .default("gemini"),
+    .default("openai"),
   ANTHROPIC_API_KEY: Joi.string().optional(),
   CLAUDE_MODEL: Joi.string().default("claude-3-sonnet-20240229"),
   OPENAI_API_KEY: Joi.string().optional(),

@@ -976,3 +976,12 @@
     "stack": "Error: stopped\n    at MCPChild.stop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcp\\child.js:112:29)\n    at MCPService.disconnectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:140:19)\n    at MCPService.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:223:28)\n    at GVAIBotApp.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:779:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async App.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:160:13)"
   }
 }
+2025-08-18 13:07:50 [ERROR]: Child MCP call failed (clipplayer:ampp_refresh_application_schemas)
+{
+  "correlationId": "MCPService",
+  "error": {
+    "name": "Error",
+    "message": "stopped",
+    "stack": "Error: stopped\n    at MCPChild.stop (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcp\\child.js:112:29)\n    at MCPService.disconnectServer (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:140:19)\n    at MCPService.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\services\\mcpService.js:223:28)\n    at GVAIBotApp.cleanup (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:903:30)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async App.<anonymous> (C:\\Users\\DXD07081\\Stash\\GVAIBot\\dist\\main.js:161:13)"
+  }
+}

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useMCP } from "../hooks/useMCP";
+import CloseIcon from "../assets/icons/close.svg";
+import TrashIcon from "../assets/icons/trash.svg";
 
 interface MCPPanelProps {
   onClose: () => void;
@@ -36,6 +38,154 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
     }[]
   >([]);
   const [formatError, setFormatError] = useState<string | null>(null);
+
+  // Curated example args derived from CLIPPLAYER_MCP_USAGE.md and AMPP tools
+  const exampleArgsByTool: Record<
+    string,
+    Array<{ label: string; args: any }>
+  > = useMemo(
+    () => ({
+      // ClipPlayer controls
+      load_clip: [
+        { label: "file", args: { file: "S3://my-bucket/video.mp4" } },
+        { label: "clipId", args: { clipId: "01GSY8CK27A1AW12W8C1V66HJXC" } },
+      ],
+      play_pause: [{ label: "toggle", args: {} }],
+      transport_state: [
+        { label: "play loop", args: { state: "play", endBehaviour: "loop" } },
+        { label: "pause", args: { state: "pause" } },
+      ],
+      seek: [{ label: "frame 1000", args: { frame: 1000 } }],
+      set_rate: [
+        { label: "2.0x", args: { rate: 2.0 } },
+        { label: "-0.5x", args: { rate: -0.5 } },
+      ],
+      shuttle: [
+        { label: "scrub -2.0", args: { rate: -2.0 } },
+        { label: "scrub 3.0", args: { rate: 3.0 } },
+      ],
+      transport_command: [
+        {
+          label: "pos/in/out/rate/loop",
+          args: {
+            position: 100,
+            inPosition: 10,
+            outPosition: 200,
+            rate: 1.0,
+            endBehaviour: "loop",
+          },
+        },
+      ],
+      goto_start: [{ label: "start", args: {} }],
+      goto_end: [{ label: "end", args: {} }],
+      step_forward: [{ label: "step +1", args: {} }],
+      step_back: [{ label: "step -1", args: {} }],
+      mark_in: [{ label: "mark in", args: {} }],
+      mark_out: [{ label: "mark out", args: {} }],
+      fast_forward: [{ label: "fast forward", args: {} }],
+      rewind: [{ label: "rewind", args: {} }],
+      loop: [{ label: "toggle loop", args: {} }],
+      get_state: [{ label: "get state", args: {} }],
+      clear_assets: [{ label: "clear", args: {} }],
+
+      // AMPP discovery / workloads / schemas
+      ampp_list_application_types: [{ label: "all apps", args: {} }],
+      ampp_list_workloads: [
+        { label: "ClipPlayer", args: { applicationType: "ClipPlayer" } },
+        { label: "MiniMixer", args: { applicationType: "MiniMixer" } },
+      ],
+      ampp_list_all_workloads: [{ label: "all apps & workloads", args: {} }],
+      ampp_list_workload_names: [
+        { label: "ClipPlayer names", args: { applicationType: "ClipPlayer" } },
+      ],
+      set_active_workload: [
+        {
+          label: "ClipPlayer active",
+          args: {
+            applicationType: "ClipPlayer",
+            workloadId: "your-workload-id",
+          },
+        },
+      ],
+      get_active_workload: [
+        {
+          label: "ClipPlayer active?",
+          args: { applicationType: "ClipPlayer" },
+        },
+      ],
+      ampp_refresh_application_schemas: [{ label: "refresh", args: {} }],
+      ampp_list_commands_for_application: [
+        { label: "ClipPlayer cmds", args: { applicationType: "ClipPlayer" } },
+        {
+          label: "ClipPlayer cmds+summary",
+          args: { applicationType: "ClipPlayer", includeSummary: true },
+        },
+      ],
+      ampp_show_command_schema: [
+        {
+          label: "schema(play)",
+          args: { applicationType: "ClipPlayer", command: "play" },
+        },
+      ],
+      ampp_get_command_doc: [
+        {
+          label: "doc(play)",
+          args: {
+            applicationType: "ClipPlayer",
+            command: "play",
+            format: "markdown",
+          },
+        },
+      ],
+      ampp_validate_payload: [
+        {
+          label: "validate",
+          args: {
+            applicationType: "ClipPlayer",
+            command: "controlstate",
+            payload: { Index: 1, Program: true },
+          },
+        },
+      ],
+      ampp_suggest_payload: [
+        {
+          label: "suggest",
+          args: { applicationType: "ClipPlayer", command: "controlstate" },
+        },
+      ],
+      ampp_invoke: [
+        {
+          label: "invoke(controlstate)",
+          args: {
+            applicationType: "ClipPlayer",
+            workloadId: "your-workload-id",
+            command: "controlstate",
+            payload: { Index: 1, Program: true },
+          },
+        },
+      ],
+      ampp_invoke_by_workload_name: [
+        {
+          label: "invoke by name",
+          args: {
+            applicationType: "ClipPlayer",
+            workloadName: "Studio:ClipPlayer",
+            command: "controlstate",
+            payload: { Index: 1, Program: true },
+          },
+        },
+      ],
+      ampp_list_macros: [{ label: "list", args: {} }],
+      ampp_execute_macro_by_name: [
+        { label: "execute", args: { name: "Start Show" } },
+      ],
+      ampp_list_example_prompts: [
+        { label: "all", args: {} },
+        { label: "ClipPlayer", args: { applicationType: "ClipPlayer" } },
+      ],
+    }),
+    []
+  );
 
   const toolPresets = [
     "ping",
@@ -172,8 +322,13 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
           >
             ⏱
           </button>
-          <button className="btn danger" onClick={onClose} title="Close panel">
-            ✖
+          <button
+            className="btn danger"
+            onClick={onClose}
+            title="Close panel"
+            aria-label="Close MCP panel"
+          >
+            <img src={CloseIcon} alt="Close" width={14} height={14} />
           </button>
         </div>
       </div>
@@ -299,9 +454,7 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
                     </div>
                   )}
                   {selected.status === "connected" && (
-                    <div
-                      style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}
-                    >
+                    <div className="tools-scroll">
                       {(toolsByServer[selected.id] || []).map((t: any) => (
                         <button
                           key={t.name}
@@ -359,6 +512,37 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
                     spellCheck={false}
                   />
                 )}
+                {/* Example presets */}
+                {selected &&
+                  selected.status === "connected" &&
+                  (exampleArgsByTool[toolName]?.length || 0) > 0 && (
+                    <div className="examples-row">
+                      <div className="examples-header">
+                        <label>Examples</label>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "6px",
+                        }}
+                      >
+                        {(exampleArgsByTool[toolName] ?? []).map((ex, idx) => (
+                          <button
+                            key={`${toolName}-ex-${idx}`}
+                            type="button"
+                            className="chip"
+                            title={`Insert example: ${ex.label}`}
+                            onClick={() =>
+                              setToolArgs(JSON.stringify(ex.args, null, 2))
+                            }
+                          >
+                            {ex.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 {formatError && (
                   <div className="mcp-alert error compact">{formatError}</div>
                 )}
@@ -396,8 +580,14 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
                           className="btn xs subtle"
                           onClick={clearResult}
                           title="Clear"
+                          aria-label="Clear result"
                         >
-                          🗑
+                          <img
+                            src={TrashIcon}
+                            alt="Clear"
+                            width={12}
+                            height={12}
+                          />
                         </button>
                       </div>
                     </div>
@@ -415,8 +605,10 @@ const MCPPanel: React.FC<MCPPanelProps> = ({ onClose }) => {
                       className="btn xs subtle"
                       onClick={() => setHistory([])}
                       disabled={!history.length}
+                      title="Clear history"
+                      aria-label="Clear invocation history"
                     >
-                      Clear
+                      <img src={TrashIcon} alt="Clear" width={12} height={12} />
                     </button>
                   </div>
                   {history.length === 0 && (

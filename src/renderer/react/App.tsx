@@ -12,7 +12,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
-  const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
+  // Voice input is always available; no toggle needed
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMCPPanelOpen, setIsMCPPanelOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -57,7 +57,7 @@ const App: React.FC = () => {
           const sysMessage: Message = {
             id: msgId,
             content:
-              "Connecting to Clip Player… bootstrapping schemas and loading tools…",
+              "Connecting to AMPP MCP Server… bootstrapping schemas and loading tools…",
             sender: "assistant",
             timestamp: new Date(),
             type: "text",
@@ -89,7 +89,7 @@ const App: React.FC = () => {
                 ? {
                     ...m,
                     content:
-                      "Schemas refreshed and tools loaded. You can now ask for AMPP commands or Clip Player controls.",
+                      "Schemas refreshed and tools loaded. You can now ask for AMPP commands or ClipPlayer controls.",
                   }
                 : m
             )
@@ -205,11 +205,7 @@ const App: React.FC = () => {
       setMessages((prev) => [...prev, assistantMessage]);
 
       // Simple TTS: speak the assistant response if voice is enabled
-      if (
-        isVoiceEnabled &&
-        typeof window !== "undefined" &&
-        "speechSynthesis" in window
-      ) {
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
         try {
           const utter = new SpeechSynthesisUtterance(response);
           utter.rate = 1.0;
@@ -258,13 +254,7 @@ const App: React.FC = () => {
     return `${randomResponse} This is a simulated response to: "${userMessage}"`;
   };
 
-  const handleVoiceToggle = () => {
-    setIsVoiceEnabled(!isVoiceEnabled);
-    setSettings((prev: AppSettings) => ({
-      ...prev,
-      voiceEnabled: !isVoiceEnabled,
-    }));
-  };
+  // Voice toggle removed
 
   const handleSettingsToggle = () => {
     setIsSettingsOpen(!isSettingsOpen);
@@ -298,9 +288,7 @@ const App: React.FC = () => {
     <div className={`app ${settings.theme}`}>
       <Header
         isConnected={isConnected}
-        isVoiceEnabled={isVoiceEnabled}
         isMcpLoading={!!pendingNotice}
-        onVoiceToggle={handleVoiceToggle}
         onSettingsToggle={handleSettingsToggle}
         onClearChat={handleClearChat}
         onMCPToggle={handleMCPToggle}
@@ -316,7 +304,6 @@ const App: React.FC = () => {
 
         <MessageInput
           onSendMessage={handleSendMessage}
-          isVoiceEnabled={isVoiceEnabled}
           disabled={!isConnected}
         />
       </main>

@@ -23,7 +23,7 @@ flowchart LR
   M --> VS(VoiceService)
   AIS --> AIP(Providers: OpenAI/Gemini/Anthropic)
   MCPS --> CH(MCPChild stdio)
-  CH --> Srv(Clip Player MCP)
+  CH --> Srv(AMPP MCP Server)
   VS --> GCP(Google Speech-to-Text)
 ```
 
@@ -52,7 +52,7 @@ sequenceDiagram
   participant M as Main (chat:send-message)
   participant X as MCPService
   participant C as MCPChild
-  participant S as Clip Player MCP
+  participant S as AMPP MCP Server
 
   U->>R: Type "list all application types"
   R->>P: electronAPI.chat.sendMessage(text)
@@ -131,7 +131,7 @@ sequenceDiagram
   participant M as Main
   participant X as MCPService
   participant C as MCPChild
-  participant S as Clip Player MCP
+  participant S as AMPP MCP Server
   participant R as Renderer
 
   M->>M: BrowserWindow ready-to-show

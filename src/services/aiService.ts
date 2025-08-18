@@ -46,7 +46,10 @@ export class AIService {
     this.connectivity = new Connectivity(this.logger);
 
     // Initialize API keys if available
-    this.openaiApiKey = config.ai.apiKey || process.env.OPENAI_API_KEY || null;
+    // Prefer explicit OpenAI key; only fall back to config when provider is openai
+    this.openaiApiKey =
+      process.env.OPENAI_API_KEY ||
+      (config.ai.provider === "openai" ? (config.ai.apiKey as string | null) : null);
     this.anthropicApiKey = process.env.ANTHROPIC_API_KEY || null;
     this.geminiApiKey = process.env.GEMINI_API_KEY || null;
 
@@ -179,9 +182,11 @@ export class AIService {
    * Test connectivity with current API configuration
    */
   async testConnection(
-    provider: "openai" | "anthropic" | "gemini" = "gemini"
+    provider?: "openai" | "anthropic" | "gemini"
   ): Promise<boolean> {
     try {
+      const chosen: "openai" | "anthropic" | "gemini" =
+        provider ?? (config.ai.provider as any);
       // First test basic internet connectivity
       this.logger.info("🌐 Testing internet connectivity...");
       const hasInternet = await this.testInternetConnectivity();
@@ -193,7 +198,7 @@ export class AIService {
       }
       this.logger.info("✅ Internet connectivity confirmed");
 
-      if (provider === "gemini") {
+  if (chosen === "gemini") {
         if (!this.geminiApiKey) {
           this.logger.error("❌ No Gemini API key configured");
           return false;
@@ -210,7 +215,7 @@ export class AIService {
             : "❌ Gemini connection failed - no response"
         );
         return ok;
-      } else if (provider === "openai") {
+  } else if (chosen === "openai") {
         if (!this.openaiClient) this.initializeOpenAI();
         const ok = await testOpenAI(
           this.logger,
@@ -223,7 +228,7 @@ export class AIService {
             : "❌ OpenAI connection failed - no response"
         );
         return ok;
-      } else if (provider === "anthropic") {
+  } else if (chosen === "anthropic") {
         const ok = await testAnthropic(this.logger, this.anthropicApiKey);
         this.logger.info(
           ok
@@ -233,7 +238,7 @@ export class AIService {
         return ok;
       }
 
-      this.logger.error(`❌ Unknown provider: ${provider}`);
+  this.logger.error(`❌ Unknown provider: ${chosen}`);
       return false;
     } catch (error: any) {
       // Log the complete error object for debugging

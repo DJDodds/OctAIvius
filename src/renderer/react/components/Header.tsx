@@ -1,11 +1,14 @@
 import React from "react";
 import OctaiviusIcon from "../assets/Octaivius.svg";
+import GVLogo from "../assets/icons/gv2021.svg";
+import SettingsIcon from "../assets/icons/settings.svg";
+import ServerIcon from "../assets/icons/server.svg";
+import CloseIcon from "../assets/icons/close.svg";
+import DeleteIcon from "../assets/icons/delete.svg";
 
 interface HeaderProps {
   isConnected: boolean;
-  isVoiceEnabled: boolean;
   isMcpLoading?: boolean;
-  onVoiceToggle: () => void;
   onSettingsToggle: () => void;
   onClearChat: () => void;
   onMCPToggle: () => void;
@@ -14,9 +17,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({
   isConnected,
-  isVoiceEnabled,
   isMcpLoading,
-  onVoiceToggle,
   onSettingsToggle,
   onClearChat,
   onMCPToggle,
@@ -27,8 +28,8 @@ const Header: React.FC<HeaderProps> = ({
       <div className="header-content">
         <div className="header-left">
           <img
-            src={OctaiviusIcon}
-            alt="OctAIvius"
+            src={GVLogo}
+            alt="GVLogo"
             width={75}
             height={75}
             style={{ display: "block" }}
@@ -73,21 +74,11 @@ const Header: React.FC<HeaderProps> = ({
 
         <div className="header-controls no-drag">
           <button
-            className={`control-btn voice-btn ${
-              isVoiceEnabled ? "active" : ""
-            }`}
-            onClick={onVoiceToggle}
-            title="Toggle Voice Input"
-          >
-            <span className="icon">{isVoiceEnabled ? "🎤" : "🔇"}</span>
-          </button>
-
-          <button
             className="control-btn"
             onClick={onClearChat}
             title="Clear Chat"
           >
-            <span className="icon">🗑️</span>
+            <img src={DeleteIcon} alt="Clear" width={20} height={20} />
           </button>
 
           <button
@@ -95,7 +86,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onSettingsToggle}
             title="Settings"
           >
-            <span className="icon">⚙️</span>
+            <img src={SettingsIcon} alt="Settings" width={20} height={20} />
           </button>
 
           <button
@@ -103,7 +94,7 @@ const Header: React.FC<HeaderProps> = ({
             onClick={onMCPToggle}
             title="MCP Servers"
           >
-            <span className="icon">🧩</span>
+            <img src={ServerIcon} alt="MCP" width={20} height={20} />
           </button>
 
           {/* Close button for frameless window */}
@@ -113,7 +104,7 @@ const Header: React.FC<HeaderProps> = ({
             title="Close"
             aria-label="Close window"
           >
-            <span className="icon">✖️</span>
+            <img src={CloseIcon} alt="Close" width={20} height={20} />
           </button>
         </div>
       </div>

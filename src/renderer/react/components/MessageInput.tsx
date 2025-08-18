@@ -1,15 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useElectron } from "../hooks/useElectron";
+import { useOpenAIRealtime } from "../hooks/useOpenAIRealtime";
+
+import MicIcon from "../assets/icons/mic.svg";
+import StopIcon from "../assets/icons/stop.svg";
+import SendIcon from "../assets/icons/send.svg";
 
 interface MessageInputProps {
   onSendMessage: (message: string, type?: "text" | "voice") => void;
-  isVoiceEnabled: boolean;
   disabled?: boolean;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
-  isVoiceEnabled,
   disabled = false,
 }) => {
   const [message, setMessage] = useState("");
@@ -28,6 +31,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const realtime = useOpenAIRealtime();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -230,8 +234,6 @@ const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   const handleVoiceRecord = async () => {
-    if (!isVoiceEnabled) return;
-
     if (!isRecording) {
       // Start recording
       try {
@@ -260,6 +262,29 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="message-input-container">
+      {realtime.connected && (realtime.isStreaming || realtime.isAwaiting) && realtime.liveTranscript && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: 60,
+            left: 16,
+            right: 16,
+            padding: "6px 10px",
+            background: "rgba(255,255,255,0.06)",
+            border: "1px solid var(--border, #333)",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "var(--text-secondary, #bbb)",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            pointerEvents: "none",
+          }}
+          title={realtime.liveTranscript}
+        >
+          {realtime.liveTranscript}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="message-form">
         <div className="input-wrapper">
           <textarea
@@ -346,25 +371,127 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </div>
           )}
 
-          {isVoiceEnabled && (
-            <button
-              type="button"
-              onClick={handleVoiceRecord}
-              className={`voice-record-btn ${isRecording ? "recording" : ""}`}
-              disabled={disabled}
-              title={isRecording ? "Stop recording" : "Start voice recording"}
-            >
-              <span className="icon">{isRecording ? "⏹️" : "🎤"}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleVoiceRecord}
+            className={`voice-record-btn ${isRecording ? "recording" : ""}`}
+            disabled={disabled}
+            title={
+              isRecording
+                ? "Stop local STT recording"
+                : "Start local STT recording"
+            }
+          >
+            <img
+              src={isRecording ? StopIcon : MicIcon}
+              alt={isRecording ? "Stop STT" : "STT Mic"}
+              width={20}
+              height={20}
+            />
+            <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.8 }}>
+              STT
+            </span>
+          </button>
+
+          {/* Realtime Live button (OpenAI Realtime speech-to-speech) */}
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                if (!realtime.connected) {
+                  const res = await realtime.start({ voice: "verse" });
+                  // startMic only after we see connected state flip via event
+                  setTimeout(() => {
+                    if (realtime.connected) void realtime.startMic();
+                  }, 50);
+                } else {
+                  // Stop mic, commit buffer, and stop session
+                  realtime.stopMic();
+                  await realtime.commit();
+                  await realtime.stop();
+                }
+              } catch (e) {
+                console.error("Realtime start/stop failed", e);
+              }
+            }}
+            className={`voice-record-btn ${
+              realtime.connected ? "recording" : ""
+            }`}
+            disabled={disabled}
+            title={
+              !realtime.connected
+                ? "Start Realtime streaming"
+                : realtime.isSpeaking
+                ? "Speaking (playing response)"
+                : realtime.isAwaiting
+                ? "Thinking (preparing answer)"
+                : realtime.isStreaming
+                ? "Listening (capturing mic)"
+                : "Realtime connected"
+            }
+            aria-label={
+              !realtime.connected
+                ? "Start Realtime streaming"
+                : realtime.isSpeaking
+                ? "Realtime speaking"
+                : realtime.isAwaiting
+                ? "Realtime thinking"
+                : realtime.isStreaming
+                ? "Realtime listening"
+                : "Realtime connected"
+            }
+          >
+            <img
+              src={realtime.connected ? StopIcon : MicIcon}
+              alt={realtime.connected ? "Stop Realtime" : "Realtime Mic"}
+              width={20}
+              height={20}
+            />
+            <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.85 }}>
+              {!realtime.connected
+                ? "Live"
+                : realtime.isSpeaking
+                ? "Speaking"
+                : realtime.isAwaiting
+                ? "Thinking"
+                : realtime.isStreaming
+                ? "Listening"
+                : "Live"}
+            </span>
+            {realtime.connected && (
+              <div
+                title={`Input level: ${(Math.min(1, Math.max(0, realtime.vu)) * 100).toFixed(0)}%`}
+                aria-label="Realtime input level"
+                style={{
+                  marginLeft: 8,
+                  width: 36,
+                  height: 6,
+                  borderRadius: 4,
+                  background: "rgba(255,255,255,0.08)",
+                  overflow: "hidden",
+                  alignSelf: "center",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${Math.min(100, Math.round((realtime.vu || 0) * 200))}%`,
+                    height: "100%",
+                    background: realtime.voiceActive ? "#22c55e" : "#888",
+                    transition: "width 50ms linear, background 120ms ease",
+                  }}
+                />
+              </div>
+            )}
+          </button>
 
           <button
             type="submit"
             disabled={!message.trim() || disabled}
             className="send-btn"
             title="Send message"
+            aria-label="Send message"
           >
-            <span className="icon">📤</span>
+            <img src={SendIcon} alt="Send" width={20} height={20} />
           </button>
         </div>
       </form>

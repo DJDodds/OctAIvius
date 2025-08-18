@@ -1,7 +1,7 @@
 import { Logger } from "../../utils/logger";
 
 /**
- * Dedupe and execute AMPP schema bootstrap for a server.
+ * Dedupe and execute AMPP schema bootstrap for a server (Generic AMPP MCP).
  * Accepts a shared in-flight tracker Map to prevent duplicate concurrent refreshes.
  */
 export async function bootstrapSchemasOnce(

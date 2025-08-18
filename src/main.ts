@@ -3,7 +3,14 @@
  * Handles window management and basic IPC communication
  */
 
-import { app, BrowserWindow, ipcMain, Menu, dialog } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Menu,
+  dialog,
+  nativeImage,
+} from "electron";
 import * as path from "path";
 import * as fs from "fs";
 import { config } from "./config";
@@ -12,6 +19,7 @@ import { Logger } from "./utils/logger";
 import { AIService } from "./services/aiService";
 import { VoiceService } from "./services/voiceService";
 import { MCPService } from "./services/mcpService";
+import { OpenAIRealtimeService } from "./services/realtime/openaiRealtime";
 
 // Load root .env for the Electron app
 dotenv.config();
@@ -23,10 +31,33 @@ const logger = new Logger("Main");
 const aiService = new AIService();
 const voiceService = new VoiceService();
 const mcpService = new MCPService();
+let realtimeService: OpenAIRealtimeService | null = null;
 
-// Staticaly register local Clip Player MCP server so it shows up in listServers
+// Resolve app/window icon path across dev and packaged builds
+function getIconPath(): string | undefined {
+  // Prefer a consistent filename used by electron-builder config
+  const devCandidates = [
+    path.join(__dirname, "..", "assets", "icon.ico"),
+    path.join(__dirname, "..", "assets", "favicon2021.ico"),
+  ];
+  const prodCandidates = [
+    path.join(process.resourcesPath, "assets", "icon.ico"),
+    path.join(process.resourcesPath, "assets", "favicon2021.ico"),
+  ];
+  const candidates = app.isPackaged ? prodCandidates : devCandidates;
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    } catch {}
+  }
+  return undefined;
+}
+
+// Statically register local AMPP MCP Server so it shows up in listServers
 // Adjust path if project layout changes.
-// Auto-detect build vs TS source for clipplayer MCP server
+// Auto-detect build vs TS source for the MCP server
 (() => {
   const clipRoot = path.resolve(
     "C:/Users/DXD07081/Stash/gv-ampp-clipplayer-mcp"
@@ -56,7 +87,7 @@ const mcpService = new MCPService();
     clipEnv.CLIPPLAYER_WORKLOAD_ID = process.env.CLIPPLAYER_WORKLOAD_ID;
   mcpService.registerServerConfig({
     id: "clipplayer",
-    name: "Clip Player",
+    name: "AMPP MCP Server",
     command,
     args,
     cwd: clipRoot,
@@ -66,7 +97,9 @@ const mcpService = new MCPService();
     restartBackoffMs: 3000,
     // Let the child wait for readiness logs before initialize
     skipInitialize: false,
-    readyPattern: /ClipPlayer MCP Server started successfully/i,
+    // Updated for both generic and ClipPlayer server logs
+    readyPattern:
+      /(Generic (?:AMPP )?MCP server|ClipPlayer MCP server) (?:running on stdio|started successfully)/i,
     postSpawnDelayMs: 1500,
   });
 })();
@@ -117,6 +150,15 @@ class GVAIBotApp {
   private setupApp(): void {
     // App event handlers
     app.whenReady().then(() => {
+      // Ensure Windows properly associates the app (and taskbar icon)
+      if (process.platform === "win32") {
+        try {
+          app.setAppUserModelId("com.gvaibot.app");
+          logger.info("🪟 AppUserModelID set to com.gvaibot.app");
+        } catch (e) {
+          logger.warn("Failed to set AppUserModelID", e as any);
+        }
+      }
       this.createMainWindow();
       this.setupIPC();
       this.setupMenu();
@@ -149,7 +191,17 @@ class GVAIBotApp {
   private createMainWindow(): void {
     logger.info("🖼️ Creating main window...");
 
-    this.mainWindow = new BrowserWindow({
+    logger.info("Directory name");
+    logger.info(__dirname);
+    const iconPath = getIconPath();
+    if (iconPath) {
+      logger.info(`🖼️ Using window icon: ${iconPath}`);
+    } else {
+      logger.warn(
+        "⚠️ No window icon found. Checked ./assets/icon.ico and ./assets/favicon2021.ico"
+      );
+    }
+    const winOpts: Electron.BrowserWindowConstructorOptions = {
       width: 1200,
       height: 800,
       minWidth: 800,
@@ -166,7 +218,22 @@ class GVAIBotApp {
         webSecurity: true,
       },
       show: false,
-    });
+    };
+    if (iconPath) {
+      winOpts.icon = iconPath;
+    }
+    this.mainWindow = new BrowserWindow(winOpts);
+    // On some Windows setups, explicitly setting the icon post-creation helps the taskbar update
+    if (iconPath) {
+      try {
+        const img = nativeImage.createFromPath(iconPath);
+        if (!img.isEmpty()) {
+          this.mainWindow.setIcon(img);
+        }
+      } catch (e) {
+        logger.warn("Failed to set icon via nativeImage", e as any);
+      }
+    }
 
     // Enable microphone permissions for speech recognition
     this.mainWindow.webContents.session.setPermissionRequestHandler(
@@ -187,6 +254,11 @@ class GVAIBotApp {
     const htmlPath = path.join(__dirname, "../dist/renderer/index.html");
     this.mainWindow.loadFile(htmlPath);
 
+    // Attach window to realtime service if already created
+    if (realtimeService) {
+      realtimeService.attachWindow(this.mainWindow);
+    }
+
     // Show window when ready to prevent visual flash
     this.mainWindow.once("ready-to-show", () => {
       this.mainWindow?.show();
@@ -197,7 +269,7 @@ class GVAIBotApp {
         this.mainWindow?.webContents.openDevTools();
       }
 
-      // Auto-connect to the ClipPlayer MCP server on first window ready
+      // Auto-connect to the AMPP MCP Server on first window ready
       (async () => {
         try {
           logger.info("🛰️ Auto-connecting to MCP server: clipplayer");
@@ -319,9 +391,57 @@ class GVAIBotApp {
             "- list workloads for <app>",
             "- set clipplayer workload to <workloadId>",
             "- play | pause | seek 100 | set rate 2 | shuttle -4",
+            "- show clipplayer examples",
           ].join("\n");
           return { success: true, response: guidance };
         };
+
+        // Helper: curated ClipPlayer/AMPP examples (from server docs)
+        const mcpExamplesText = () => {
+          return [
+            "Examples (tools/call):",
+            "\nClipPlayer tools:",
+            '{"tool":"load_clip","arguments":{"file":"S3://my-bucket/video.mp4"}}',
+            '{"tool":"load_clip","arguments":{"clipId":"01GSY8CK27A1AW12W8C1V66HJXC"}}',
+            '{"tool":"play_pause","arguments":{}}',
+            '{"tool":"seek","arguments":{"frame":1000}}',
+            '{"tool":"set_rate","arguments":{"rate":2.0}}',
+            '{"tool":"shuttle","arguments":{"rate":-2.0}}',
+            '{"tool":"transport_command","arguments":{"position":100,"inPosition":10,"outPosition":200,"rate":1.0,"endBehaviour":"loop"}}',
+            '{"tool":"goto_start","arguments":{}}',
+            '{"tool":"goto_end","arguments":{}}',
+            '{"tool":"step_forward","arguments":{}}',
+            '{"tool":"step_back","arguments":{}}',
+            '{"tool":"mark_in","arguments":{}}',
+            '{"tool":"mark_out","arguments":{}}',
+            '{"tool":"fast_forward","arguments":{}}',
+            '{"tool":"rewind","arguments":{}}',
+            '{"tool":"loop","arguments":{}}',
+            '{"tool":"get_state","arguments":{}}',
+            '{"tool":"clear_assets","arguments":{}}',
+            "\nAMPP tools:",
+            '{"tool":"ampp_list_workloads","arguments":{"applicationType":"ClipPlayer"}}',
+            '{"tool":"ampp_list_workload_names","arguments":{"applicationType":"ClipPlayer"}}',
+            '{"tool":"set_active_workload","arguments":{"applicationType":"ClipPlayer","workloadId":"your-workload-id"}}',
+            '{"tool":"get_active_workload","arguments":{"applicationType":"ClipPlayer"}}',
+            '{"tool":"ampp_refresh_application_schemas","arguments":{}}',
+            '{"tool":"ampp_list_commands_for_application","arguments":{"applicationType":"ClipPlayer","includeSummary":true}}',
+            '{"tool":"ampp_show_command_schema","arguments":{"applicationType":"ClipPlayer","command":"play"}}',
+            '{"tool":"ampp_get_command_doc","arguments":{"applicationType":"ClipPlayer","command":"play","format":"markdown"}}',
+            '{"tool":"ampp_invoke","arguments":{"applicationType":"ClipPlayer","workloadId":"your-workload-id","command":"controlstate","payload":{"Index":1,"Program":true}}}',
+          ].join("\n");
+        };
+
+        // Quick examples on request
+        if (
+          /\b(examples|usage|how to)\b.*\b(clipplayer|mcp|ampp)\b/i.test(
+            message
+          ) ||
+          /\b(clipplayer|mcp|ampp)\b.*\b(examples|usage)\b/i.test(message)
+        ) {
+          logger.info("ℹ️ Providing curated MCP examples text");
+          return { success: true, response: mcpExamplesText() };
+        }
 
         // AMPP schema and commands
         let m;
@@ -344,12 +464,18 @@ class GVAIBotApp {
             applicationType: app,
           });
         }
-        if ((m = message.match(/list (?:the )?commands for\s+([\w.-]+)/i))) {
+        if (
+          (m = message.match(
+            /list (?:the )?commands for\s+([\w.-]+)(?:\s+with\s+summaries?)?/i
+          ))
+        ) {
           logger.info("🧩 NL route -> ampp_list_commands_for_application", {
             app: m[1],
           });
+          const includeSummary = /with\s+summaries?/i.test(message);
           return await call("ampp_list_commands_for_application", {
             applicationType: m[1],
+            includeSummary,
           });
         }
         if (
@@ -380,27 +506,48 @@ class GVAIBotApp {
           logger.info("🧩 NL route -> ampp_list_application_types");
           return await call("ampp_list_application_types");
         }
-        if ((m = message.match(/list (?:all )?workloads for\s+([\w.-]+)/i))) {
-          logger.info("🧩 NL route -> ampp_list_workloads", { app: m[1] });
-          return await call("ampp_list_workloads", { applicationType: m[1] });
-        }
-        if (/list (?:all )?workloads\b/i.test(message)) {
+        // Workloads discovery
+        if (
+          (m = message.match(
+            /list(?:\s+all)?\s+workloads(?:\s+for\s+([\w.-]+))?/i
+          ))
+        ) {
+          const app = m[1]?.trim();
+          if (app) {
+            logger.info("🧩 NL route -> ampp_list_workloads", { app });
+            return await call("ampp_list_workloads", { applicationType: app });
+          }
           logger.info("🧩 NL route -> ampp_list_all_workloads");
-          return await call("ampp_list_all_workloads");
+          return await call("ampp_list_all_workloads", {});
+        }
+        if (
+          (m = message.match(/list (?:all )?workload names for\s+([\w.-]+)/i))
+        ) {
+          logger.info("🧩 NL route -> ampp_list_workload_names", { app: m[1] });
+          return await call("ampp_list_workload_names", {
+            applicationType: m[1],
+          });
         }
         if (/list (?:all )?clip ?players/i.test(message)) {
-          logger.info("🧩 NL route -> ampp_list_clip_players");
-          return await call("ampp_list_clip_players");
+          logger.info("🧩 NL route -> ampp_list_workload_names (ClipPlayer)");
+          return await call("ampp_list_workload_names", {
+            applicationType: "ClipPlayer",
+          });
         }
         if ((m = message.match(/set clipplayer workload to\s+([\w-]+)/i))) {
-          logger.info("🧩 NL route -> set_clipplayer_workload", {
+          logger.info("🧩 NL route -> set_active_workload (ClipPlayer)", {
             workloadId: m[1],
           });
-          return await call("set_clipplayer_workload", { workloadId: m[1] });
+          return await call("set_active_workload", {
+            applicationType: "ClipPlayer",
+            workloadId: m[1],
+          });
         }
         if (/get clipplayer workload/i.test(message)) {
-          logger.info("🧩 NL route -> get_clipplayer_workload");
-          return await call("get_clipplayer_workload");
+          logger.info("🧩 NL route -> get_active_workload (ClipPlayer)");
+          return await call("get_active_workload", {
+            applicationType: "ClipPlayer",
+          });
         }
         if (
           (m = message.match(
@@ -442,21 +589,27 @@ class GVAIBotApp {
           ))
         ) {
           const { obj } = extractJson(message);
-          logger.info("🧩 NL route -> ampp_send_control_message", {
-            workloadId: m[1],
-            app: m[2],
-            schema: m[3],
-          });
-          return await call("ampp_send_control_message", {
+          logger.info(
+            "🧩 NL route -> ampp_invoke (from NL 'send control message')",
+            { workloadId: m[1], app: m[2], command: m[3] }
+          );
+          return await call("ampp_invoke", {
             workloadId: m[1],
             applicationType: m[2],
-            schema: m[3],
+            command: m[3],
             payload: obj || {},
           });
         }
         if ((m = message.match(/get ampp state for\s+([\w-]+)/i))) {
-          logger.info("🧩 NL route -> ampp_get_state", { workloadId: m[1] });
-          return await call("ampp_get_state", { workloadId: m[1] });
+          logger.info(
+            "ℹ️ NL route deprecated -> ampp_get_state (no longer available)",
+            { workloadId: m[1] }
+          );
+          return {
+            success: true,
+            response:
+              "'ampp_get_state' has been removed. Use 'ampp_list_commands_for_application' to discover app commands, then 'ampp_invoke' or 'ampp_get_command_doc' for details.",
+          };
         }
         if (/list macros/i.test(message)) {
           logger.info("🧩 NL route -> ampp_list_macros");
@@ -669,6 +822,150 @@ class GVAIBotApp {
         return { success: true, transcript };
       } catch (error: any) {
         logger.error("❌ Error stopping voice recording:", error);
+        return { success: false, error: error?.message || "Unknown error" };
+      }
+    });
+
+    // Realtime (OpenAI) handlers
+    ipcMain.handle(
+      "realtime:start",
+      async (_e, opts: { model?: string; voice?: string } = {}) => {
+        try {
+          const key =
+            process.env.OPENAI_API_KEY ||
+            (config.ai.provider === "openai" ? config.ai.apiKey : undefined);
+          if (!key) throw new Error("OPENAI_API_KEY not configured");
+          // Basic sanity check for likely invalid keys (e.g., mistakenly using a Google key)
+          if (/^AIza[0-9A-Za-z_-]{35}$/.test(key)) {
+            logger.warn(
+              "The provided OPENAI_API_KEY looks like a Google API key (starts with AIza...). Realtime will fail to connect."
+            );
+          }
+          if (!realtimeService) {
+            realtimeService = new OpenAIRealtimeService(this.mainWindow, opts);
+          } else {
+            realtimeService.attachWindow(this.mainWindow);
+          }
+          realtimeService.setApiKey(key);
+          // Hook transcript callback into chat/MCP pipeline
+          realtimeService.setTranscriptHandler(async (text: string) => {
+            try {
+              // Reuse existing chat routing (this will NL-route to MCP as needed)
+              const res = await (async () => {
+                try {
+                  const out = await aiService.processMessage(text);
+                  return { success: true, response: out };
+                } catch (e: any) {
+                  return { success: false, error: e?.message || String(e) };
+                }
+              })();
+              const reply = res.success
+                ? res.response
+                : `Error: ${res.error}`;
+              // Speak the reply via Realtime
+              if (typeof reply === "string") {
+                realtimeService?.createAudioResponse({ instructions: reply });
+              } else {
+                realtimeService?.createAudioResponse();
+              }
+              // Also emit to renderer as assistant text message
+              this.mainWindow?.webContents.send("chat:assistant-message", {
+                content: reply,
+                source: "realtime",
+              });
+            } catch (e) {
+              logger.error("Realtime transcript pipeline failed", e as any);
+            }
+          });
+          await realtimeService.start();
+          return { success: true };
+        } catch (error: any) {
+          logger.error("❌ Realtime start failed", error);
+          return { success: false, error: error?.message || "Unknown error" };
+        }
+      }
+    );
+
+    ipcMain.handle("realtime:stop", async () => {
+      try {
+        realtimeService?.stop();
+        return { success: true };
+      } catch (error: any) {
+        logger.error("❌ Realtime stop failed", error);
+        return { success: false, error: error?.message || "Unknown error" };
+      }
+    });
+
+    ipcMain.handle(
+      "realtime:append-audio-base64",
+      async (
+        _e,
+        payload: { audioBase64: string; sampleRate?: number } | null
+      ) => {
+        try {
+          if (!payload?.audioBase64) {
+            return { success: false, error: "audioBase64 is required" };
+          }
+          if (!realtimeService) {
+            // Quietly drop audio until the service starts to avoid log spam
+            return { success: false, error: "not-started" };
+          }
+          const hasSr = typeof payload.sampleRate === "number";
+          if (hasSr) {
+            realtimeService.appendAudioBase64(payload.audioBase64, {
+              sampleRate: payload.sampleRate as number,
+            });
+          } else {
+            realtimeService.appendAudioBase64(payload.audioBase64);
+          }
+          return { success: true };
+        } catch (error: any) {
+          logger.debug("Realtime append failed", error);
+          return { success: false, error: error?.message || "Unknown error" };
+        }
+      }
+    );
+
+    ipcMain.handle(
+      "realtime:commit",
+      async (_e, params?: { instructions?: string }) => {
+        try {
+          if (!realtimeService)
+            throw new Error("Realtime service is not started");
+          // Only commit; the transcript handler will drive chat + response
+          realtimeService.commitOnly();
+          return { success: true };
+        } catch (error: any) {
+          logger.error("❌ Realtime commit failed", error);
+          return { success: false, error: error?.message || "Unknown error" };
+        }
+      }
+    );
+
+    // Allow renderer to ask Realtime to speak arbitrary text
+    ipcMain.handle(
+      "realtime:create-audio-response",
+      async (_e, params?: { instructions?: string }) => {
+        try {
+          if (!realtimeService)
+            throw new Error("Realtime service is not started");
+          realtimeService.createAudioResponse(params);
+          return { success: true };
+        } catch (error: any) {
+          logger.error("❌ Realtime createAudioResponse failed", error);
+          return { success: false, error: error?.message || "Unknown error" };
+        }
+      }
+    );
+
+    ipcMain.handle("realtime:send", async (_e, ev: any) => {
+      try {
+        if (!realtimeService)
+          throw new Error("Realtime service is not started");
+        realtimeService.sendEvent(ev || {});
+        return { success: true };
+      } catch (error: any) {
+        logger.error("❌ Realtime send failed", error);
         return { success: false, error: error?.message || "Unknown error" };
       }
     });

@@ -5,7 +5,7 @@ This document describes the current implementation of OctAIvius, a desktop-first
 ## Architecture overview
 
 - Electron main bootstraps services (AI, Voice, MCP) and manages a frameless BrowserWindow that loads the Vite-built React UI.
-- A local MCP server (Clip Player) is registered and auto‑connected on startup; schema bootstrap and tools warm‑up occur automatically.
+- A local AMPP MCP Server is registered and auto‑connected on startup; schema bootstrap and tools warm‑up occur automatically.
 - Chat supports natural‑language MCP requests (no slash needed). A minimal slash suggestion UX exists when typing `/`, if suggestions are available.
 - Voice MVP: push‑to‑talk in the renderer, STT in main, optional TTS playback for assistant replies.
 - Strict security posture: context isolation, a preload bridge, and a CSP that permits data/blob images for SVG assets.
@@ -29,7 +29,7 @@ This document describes the current implementation of OctAIvius, a desktop-first
 
 ### Natural‑language routing (main process)
 
-In `chat:send-message` (main), common AMPP and Clip Player intents are recognized via regex and routed to MCP:
+In `chat:send-message` (main), common AMPP and ClipPlayer intents are recognized via regex and routed to MCP:
 
 - AMPP discovery and schemas
 
@@ -39,11 +39,13 @@ In `chat:send-message` (main), common AMPP and Clip Player intents are recognize
   - “show the schema for <app>.<command>” → `ampp_show_command_schema`
   - “suggest a payload for <app>.<command>” → `ampp_suggest_payload`
   - “list workloads for <app>” / “list workloads” → `ampp_list_workloads` / `ampp_list_all_workloads`
-  - “list clip players” → `ampp_list_clip_players`
+  - “list clip players” → `ampp_list_workload_names` with `applicationType: ClipPlayer`
+  - “list workload names for \<app\>” → `ampp_list_workload_names`
   - Active workload: set/get for a given app → `set_active_workload` / `get_active_workload`
-  - Invoke and control messages: `ampp_invoke`, `ampp_send_control_message`
+  - Invoke control messages: use `ampp_invoke` (replaces `ampp_send_control_message`)
+  - Get command docs: `ampp_get_command_doc`; Example prompts: `ampp_list_example_prompts`
 
-- Clip Player controls
+- ClipPlayer controls
 
   - “play”, “pause”, “seek 100”, “set rate 2”, “shuttle -4”, “go to start/end”, “step forward/back”, “mark in/out”, “loop”, “get state”, “clear assets”, and composite transport commands map to their corresponding tools (`play_pause`, `seek`, `set_rate`, `shuttle`, `goto_start`, `goto_end`, `step_forward`, `step_back`, `mark_in`, `mark_out`, `loop`, `get_state`, `clear_assets`, `transport_command`, `transport_state`).
 
@@ -80,6 +82,10 @@ In `chat:send-message` (main), common AMPP and Clip Player intents are recognize
 - Start Electron: `npm run start`
 - Dev renderer only: `npm run dev:react` (launch Electron for full flow)
 - Type‑check: `npm run type-check`
+
+## Usage guide
+
+For concrete examples of tool calls and their natural‑language equivalents, see `docs/MCP_USAGE.md`.
 
 ## Adding another MCP server
 

@@ -21,6 +21,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
 
   // AI configuration
+      speak: (text?: string) =>
+        ipcRenderer.invoke("realtime:create-audio-response", text ? { instructions: text } : undefined),
   ai: {
     updateKeys: (keys: {
       openaiKey?: string;
@@ -58,6 +60,27 @@ contextBridge.exposeInMainWorld("electronAPI", {
       ipcRenderer.invoke("voice:process-audio", audioData),
     startRecording: () => ipcRenderer.invoke("voice:start-recording"),
     stopRecording: () => ipcRenderer.invoke("voice:stop-recording"),
+  },
+
+  // OpenAI Realtime operations
+  realtime: {
+    start: (opts?: { model?: string; voice?: string }) =>
+      ipcRenderer.invoke("realtime:start", opts || {}),
+    stop: () => ipcRenderer.invoke("realtime:stop"),
+    appendAudioBase64: (audioBase64: string, sampleRate?: number) =>
+      ipcRenderer.invoke("realtime:append-audio-base64", {
+        audioBase64,
+        sampleRate,
+      }),
+    commit: (params?: { instructions?: string }) =>
+      ipcRenderer.invoke("realtime:commit", params || {}),
+    send: (ev: any) => ipcRenderer.invoke("realtime:send", ev || {}),
+    onEvent: (handler: (payload: any) => void) => {
+      const listener = (_e: Electron.IpcRendererEvent, payload: any) =>
+        handler(payload);
+      ipcRenderer.on("realtime:event", listener);
+      return () => ipcRenderer.removeListener("realtime:event", listener);
+    },
   },
 
   // MCP operations
@@ -138,6 +161,17 @@ declare global {
         processAudio: (audioData: ArrayBuffer) => Promise<any>;
         startRecording: () => Promise<any>;
         stopRecording: () => Promise<any>;
+      };
+      realtime: {
+        start: (opts?: { model?: string; voice?: string }) => Promise<any>;
+        stop: () => Promise<any>;
+        appendAudioBase64: (
+          audioBase64: string,
+          sampleRate?: number
+        ) => Promise<any>;
+        commit: (params?: { instructions?: string }) => Promise<any>;
+        send: (ev: any) => Promise<any>;
+        onEvent: (handler: (payload: any) => void) => () => void;
       };
       mcp: {
         listServers: () => Promise<any>;
