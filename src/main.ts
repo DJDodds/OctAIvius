@@ -32,6 +32,16 @@ const aiService = new AIService();
 const voiceService = new VoiceService();
 const mcpService = new MCPService();
 let realtimeService: OpenAIRealtimeService | null = null;
+// Pending disambiguation state for parameter-based invocations (by sessionId)
+type PendingParamOp = {
+  app: string;
+  workloadName: string;
+  param: string;
+  valueRaw: string;
+  candidates: string[]; // command names
+  matchedParamByCommand?: Record<string, string>; // exact key (case/path) per command
+};
+const pendingParamOps: Record<string, PendingParamOp | undefined> = {};
 
 // Resolve app/window icon path across dev and packaged builds
 function getIconPath(): string | undefined {
@@ -86,7 +96,7 @@ function getIconPath(): string | undefined {
   if (process.env.CLIPPLAYER_WORKLOAD_ID)
     clipEnv.CLIPPLAYER_WORKLOAD_ID = process.env.CLIPPLAYER_WORKLOAD_ID;
   mcpService.registerServerConfig({
-    id: "clipplayer",
+    id: "ampp",
     name: "AMPP MCP Server",
     command,
     args,
@@ -272,20 +282,20 @@ class GVAIBotApp {
       // Auto-connect to the AMPP MCP Server on first window ready
       (async () => {
         try {
-          logger.info("🛰️ Auto-connecting to MCP server: clipplayer");
-          await mcpService.connectServer("clipplayer");
+          logger.info("🛰️ Auto-connecting to MCP server: ampp");
+          await mcpService.connectServer("ampp");
           // Warm the tools list
           try {
-            await mcpService.listTools("clipplayer");
+            await mcpService.listTools("ampp");
           } catch {}
           this.broadcastMcpServersUpdated({
-            serverId: "clipplayer",
+            serverId: "ampp",
             status: "connected",
           });
         } catch (e) {
-          logger.warn("⚠️ Auto-connect failed for clipplayer", e as any);
+          logger.warn("⚠️ Auto-connect failed for ampp", e as any);
           this.broadcastMcpServersUpdated({
-            serverId: "clipplayer",
+            serverId: "ampp",
             status: "error",
           });
         }
@@ -321,8 +331,29 @@ class GVAIBotApp {
 
     // Chat handler using AI service
     ipcMain.handle("chat:send-message", async (event, message: string) => {
+      // Track if handler returned successfully for final complete event
+      const opId = `op_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      let opOk = true;
       try {
         logger.info("💬 Processing chat message:", message);
+
+        // Progress helper with operation id for grouping in UI
+        // opId declared above for use in finally
+        const progress = (
+          step: string,
+          state: "start" | "done" | "error",
+          info?: any
+        ) => {
+          try {
+            event.sender.send("chat:progress", {
+              step,
+              state,
+              info,
+              ts: Date.now(),
+              opId,
+            });
+          } catch {}
+        };
 
         // Create a chat message object
         const chatMessage = {
@@ -344,7 +375,7 @@ class GVAIBotApp {
           }
         };
 
-        const serverId = "clipplayer";
+        const serverId = "ampp";
 
         // Extract a JSON object (if present) from the message
         const extractJson = (s: string): { obj?: any; error?: string } => {
@@ -361,16 +392,955 @@ class GVAIBotApp {
           return {};
         };
 
+        // Normalize command tokens like 'control@1.0' -> 'control'
+        const normalizeCmd = (cmd: string) =>
+          String(cmd || "").replace(/@\d+(?:\.\d+)*$/i, "");
+
+        // Clean up workload name captured from NL (strip stray quotes and trailing words like 'with')
+        const sanitizeWorkloadName = (raw: string): string => {
+          let s = String(raw || "").trim();
+          // remove surrounding quotes (one or many)
+          s = s.replace(/^"+/, "").replace(/"+$/, "");
+          // remove dangling hints before payload
+          s = s.replace(/\s+with(?:\s+payload)?\s*$/i, "");
+          // remove any remaining quotes
+          s = s.replace(/"/g, "");
+          return s.trim();
+        };
+
         // Helper to call MCP and normalize text return
         const call = async (tool: string, args: any = {}) => {
+          const isInvoke = /ampp_invoke/i.test(tool);
+          const timeoutMs =
+            tool === "ampp_refresh_application_schemas"
+              ? 30000
+              : /^(ampp_list_workload_names|ampp_list_workloads|ampp_list_all_workloads|ampp_list_commands_for_application|ampp_list_application_types)$/i.test(
+                  tool
+                )
+              ? 30000
+              : isInvoke
+              ? 15000
+              : 12000;
+          const infoBrief = {
+            tool,
+            applicationType: args?.applicationType,
+            workloadId: args?.workloadId,
+            workloadName: args?.workloadName,
+            command: args?.command,
+            payloadBytes: args?.payload
+              ? Buffer.byteLength(JSON.stringify(args.payload))
+              : 0,
+          };
+          progress("tools-call", "start", infoBrief);
+          if (isInvoke) progress("invoke", "start", infoBrief);
+          progress("mcp-connect", "start");
           await ensureServer(serverId);
-          const res = await mcpService.callFunction(serverId, tool, args);
-          const text =
-            typeof res?.content?.[0]?.text === "string"
-              ? res.content[0].text
-              : JSON.stringify(res);
-          return { success: true, response: text };
+          progress("mcp-connect", "done");
+          if (isInvoke) {
+            // Emit preview of invoke args
+            try {
+              const maxLen = 2000;
+              const preview = args?.payload;
+              const payloadPreview =
+                typeof preview === "object"
+                  ? JSON.stringify(preview)
+                  : String(preview || "");
+              progress("invoke-args", "start", {
+                applicationType: args?.applicationType,
+                workloadName: args?.workloadName,
+                workloadId: args?.workloadId,
+                command: args?.command,
+                payload: args?.payload || {},
+                payloadPreview:
+                  payloadPreview.length > maxLen
+                    ? payloadPreview.slice(0, maxLen) + "..."
+                    : payloadPreview,
+              });
+            } catch {}
+          }
+          if (tool === "ampp_refresh_application_schemas") {
+            progress("refresh-schemas", "start");
+          }
+          try {
+            const res = await mcpService.callFunction(serverId, tool, args, {
+              timeoutMs,
+            });
+            const text =
+              typeof res?.content?.[0]?.text === "string"
+                ? res.content[0].text
+                : JSON.stringify(res);
+            if (tool === "ampp_refresh_application_schemas") {
+              progress("refresh-schemas", "done");
+            }
+            progress("tools-call", "done", infoBrief);
+            if (isInvoke) progress("invoke", "done", infoBrief);
+            return { success: true, response: text };
+          } catch (e: any) {
+            const errMsg = e?.message || String(e);
+            if (tool === "ampp_refresh_application_schemas") {
+              progress("refresh-schemas", "error", { error: errMsg });
+            }
+            progress("tools-call", "error", { ...infoBrief, error: errMsg });
+            if (isInvoke)
+              progress("invoke", "error", { ...infoBrief, error: errMsg });
+            return {
+              success: true,
+              response: `Error calling ${tool}: ${errMsg}`,
+            };
+          }
         };
+
+        // Lightweight fuzzy matching for suggestions
+        const levenshtein = (a: string, b: string) => {
+          a = (a || "").toLowerCase();
+          b = (b || "").toLowerCase();
+          const m = a.length;
+          const n = b.length;
+          if (m === 0) return n;
+          if (n === 0) return m;
+          const dp = new Array(n + 1).fill(0);
+          for (let j = 0; j <= n; j++) dp[j] = j;
+          for (let i = 1; i <= m; i++) {
+            let prev = i - 1;
+            dp[0] = i;
+            for (let j = 1; j <= n; j++) {
+              const temp = dp[j];
+              const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+              dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + cost);
+              prev = temp;
+            }
+          }
+          return dp[n];
+        };
+        const rankClosest = (needle: string, hay: string[]) => {
+          const list = hay.map((h) => ({
+            value: h,
+            score:
+              levenshtein(needle, h) +
+              (h.toLowerCase().startsWith(needle.toLowerCase()) ? -0.25 : 0) +
+              (h.toLowerCase().includes(needle.toLowerCase()) ? -0.15 : 0),
+          }));
+          return list.sort((a, b) => a.score - b.score).map((x) => x.value);
+        };
+        const listAppTypes = async (): Promise<string[]> => {
+          try {
+            await ensureServer(serverId);
+            const res = await mcpService.callFunction(
+              serverId,
+              "ampp_list_application_types",
+              {},
+              { timeoutMs: 12000 }
+            );
+            const text =
+              typeof res?.content?.[0]?.text === "string"
+                ? res.content[0].text
+                : "";
+            // Expect newline-delimited or JSON array; try both
+            if (text.trim().startsWith("[")) {
+              const arr = JSON.parse(text);
+              return Array.isArray(arr) ? arr.map((x: any) => String(x)) : [];
+            }
+            return text
+              .split(/\r?\n/)
+              .map((s: string) => s.trim())
+              .filter(Boolean);
+          } catch {
+            return [];
+          }
+        };
+        const listCommands = async (app: string): Promise<string[]> => {
+          try {
+            await ensureServer(serverId);
+            const res = await mcpService.callFunction(
+              serverId,
+              "ampp_list_commands_for_application",
+              { applicationType: app, includeSummary: false },
+              { timeoutMs: 15000 }
+            );
+            const text =
+              typeof res?.content?.[0]?.text === "string"
+                ? res.content[0].text
+                : "";
+            // If server returned JSON array, parse it
+            if (text.trim().startsWith("[")) {
+              try {
+                const arr = JSON.parse(text);
+                if (Array.isArray(arr)) {
+                  return arr
+                    .map((v: any) => String(v))
+                    .map((s: string) => s.trim().replace(/,$/, ""))
+                    .filter(Boolean);
+                }
+              } catch {}
+            }
+            // Fallback: parse lines and strip bullets/commas/quotes
+            const items = text
+              .split(/\r?\n/)
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+              .map((line: string) =>
+                line
+                  .replace(/^[*-]\s*/, "")
+                  .replace(/,$/, "")
+                  .replace(/^"|"$/g, "")
+              )
+              .map((line: string) => line.split(/\s+/)[0])
+              .filter((s: string) => Boolean(s) && !/^[\[\]]$/.test(s));
+            return items;
+          } catch {
+            return [];
+          }
+        };
+
+        // Helper: list parameters for a specific command (robust: text or JSON schema)
+        const listParamsForCommand = async (
+          app: string,
+          cmd: string
+        ): Promise<string[]> => {
+          try {
+            await ensureServer(serverId);
+            const tryOnce = async (commandToken: string) =>
+              mcpService.callFunction(
+                serverId,
+                "ampp_get_parameters",
+                { applicationType: app, command: normalizeCmd(commandToken) },
+                { timeoutMs: 30000 }
+              );
+            let res: any;
+            try {
+              res = await tryOnce(cmd);
+            } catch {
+              res = await tryOnce(normalizeCmd(cmd));
+            }
+            const text =
+              typeof res?.content?.[0]?.text === "string"
+                ? res.content[0].text
+                : "";
+            // If server responded with not-found text, retry once with normalized command if not already
+            if (
+              /Command not found|app not cached|Not cached/i.test(text) &&
+              cmd !== normalizeCmd(cmd)
+            ) {
+              try {
+                const res2 = await tryOnce(normalizeCmd(cmd));
+                const txt2 =
+                  typeof res2?.content?.[0]?.text === "string"
+                    ? res2.content[0].text
+                    : "";
+                if (txt2) {
+                  // replace
+                  (res as any) = res2;
+                }
+              } catch {}
+            }
+            const out: string[] = [];
+            const add = (k?: string) => {
+              const s = String(k || "").trim();
+              if (!s) return;
+              if (!out.includes(s)) out.push(s);
+            };
+            const blacklist =
+              /^(command|description|summary|parameters?|returns?|schema|request|payload|input|body|example|examples)$/i;
+            // Resolve local JSON Schema $ref like #/$defs/X or #/definitions/X or #/components/schemas/X
+            const resolveRef = (ref: string, root: any): any => {
+              if (!ref || typeof ref !== "string" || !ref.startsWith("#"))
+                return undefined;
+              const path = ref.replace(/^#\/?/, "").split("/").filter(Boolean);
+              let cur: any = root;
+              for (const seg of path) {
+                if (!cur || typeof cur !== "object") return undefined;
+                cur = cur[seg];
+              }
+              return cur;
+            };
+            const collectFromSchema = (
+              schema: any,
+              prefix = "",
+              root?: any
+            ) => {
+              if (!schema || typeof schema !== "object") return;
+              // Follow $ref if present
+              if (typeof schema.$ref === "string" && root) {
+                const target = resolveRef(schema.$ref, root);
+                if (target && typeof target === "object") {
+                  collectFromSchema(target, prefix, root);
+                }
+              }
+              if (schema.properties && typeof schema.properties === "object") {
+                for (const key of Object.keys(schema.properties)) {
+                  add(prefix ? `${prefix}.${key}` : key);
+                  collectFromSchema(
+                    schema.properties[key],
+                    prefix ? `${prefix}.${key}` : key,
+                    root
+                  );
+                }
+              }
+              if (Array.isArray(schema.required)) {
+                // required keys are already covered by properties, but keep for completeness
+                schema.required.forEach((k: any) =>
+                  add(prefix ? `${prefix}.${k}` : String(k))
+                );
+              }
+              if (schema.items) {
+                collectFromSchema(schema.items, prefix, root);
+              }
+              if (schema.oneOf || schema.anyOf || schema.allOf) {
+                const arr = schema.oneOf || schema.anyOf || schema.allOf;
+                if (Array.isArray(arr))
+                  arr.forEach((s: any) => collectFromSchema(s, prefix, root));
+              }
+            };
+            const tryParseJsonFromText = (raw: string): any | undefined => {
+              let s = (raw || "").trim();
+              s = s.replace(/^```[a-zA-Z]*\n?/i, "").replace(/```\s*$/i, "");
+              // direct parse
+              if (
+                (s.startsWith("{") && s.endsWith("}")) ||
+                (s.startsWith("[") && s.endsWith("]"))
+              ) {
+                try {
+                  return JSON.parse(s);
+                } catch {}
+              }
+              // heuristics: largest braces region
+              const fi = s.indexOf("{");
+              const li = s.lastIndexOf("}");
+              if (fi >= 0 && li > fi) {
+                const sub = s.slice(fi, li + 1);
+                try {
+                  return JSON.parse(sub);
+                } catch {}
+              }
+              const fa = s.indexOf("[");
+              const la = s.lastIndexOf("]");
+              if (fa >= 0 && la > fa) {
+                const sub = s.slice(fa, la + 1);
+                try {
+                  return JSON.parse(sub);
+                } catch {}
+              }
+              return undefined;
+            };
+            // Try JSON parsing first (array or object schema)
+            let trimmed = text.trim();
+            // Strip markdown code fences if present
+            trimmed = trimmed
+              .replace(/^```[a-zA-Z]*\n?/i, "")
+              .replace(/```\s*$/i, "");
+            if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+              try {
+                const json = JSON.parse(trimmed);
+                const unwrapDeep = (obj: any): any => {
+                  if (!obj || typeof obj !== "object") return obj;
+                  // peel top-level schema
+                  if (obj.schema) return unwrapDeep(obj.schema);
+                  // common request envelopes
+                  if (obj.request) {
+                    const r = obj.request;
+                    if (r.body) return unwrapDeep(r.body);
+                    if (r.payload) return unwrapDeep(r.payload);
+                    if (r.input) return unwrapDeep(r.input);
+                    return unwrapDeep(r);
+                  }
+                  // direct alternate envelopes
+                  if (obj.body) return unwrapDeep(obj.body);
+                  if (obj.payload) return unwrapDeep(obj.payload);
+                  if (obj.input) return unwrapDeep(obj.input);
+                  if (obj.parameters) return unwrapDeep(obj.parameters);
+                  return obj;
+                };
+                if (Array.isArray(json)) {
+                  // array of strings or objects
+                  json.forEach((it: any) => {
+                    if (typeof it === "string") add(it);
+                    else if (it && typeof it === "object")
+                      add(it.name || it.param || it.parameter || it.key);
+                  });
+                } else if (json && typeof json === "object") {
+                  // assume JSON schema shape
+                  const inner = unwrapDeep(json);
+                  if (Array.isArray(inner)) {
+                    inner.forEach((it: any) => {
+                      if (typeof it === "string") add(it);
+                      else if (it && typeof it === "object")
+                        add(it.name || it.param || it.parameter || it.key);
+                    });
+                  } else {
+                    collectFromSchema(inner, "", json);
+                  }
+                }
+              } catch {
+                // fallthrough to text parsing
+              }
+            }
+            if (out.length) return out;
+            // Try embedded JSON within text
+            try {
+              const maybe = tryParseJsonFromText(trimmed);
+              if (maybe) {
+                if (Array.isArray(maybe)) {
+                  maybe.forEach((it: any) => {
+                    if (typeof it === "string") add(it);
+                    else if (it && typeof it === "object")
+                      add(it.name || it.param || it.parameter || it.key);
+                  });
+                } else if (maybe && typeof maybe === "object") {
+                  collectFromSchema(maybe, "", maybe);
+                }
+              }
+            } catch {}
+            if (out.length) return out.filter((k) => !blacklist.test(k));
+            // Fallback: parse lines and extract token before ':' or first word
+            trimmed
+              .split(/\r?\n/)
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+              .forEach((line: string) => {
+                const cleaned = line.replace(/^[*-]\s*/, "");
+                const m = cleaned.match(/^([^:\s]+)\s*:/);
+                add(m ? m[1] : cleaned.split(/\s+/)[0]);
+              });
+            if (out.length) return out.filter((k) => !blacklist.test(k));
+            // Fallback 2: parse simple markdown tables "| Param | Type | ..."; collect first column (skipping header/sep)
+            try {
+              const lines = trimmed.split(/\r?\n/).map((l: string) => l.trim());
+              const tableRows = lines.filter(
+                (l: string) => /\|/.test(l) && !/^\|?\s*-+\s*\|/.test(l)
+              );
+              if (tableRows.length) {
+                for (const row of tableRows) {
+                  const cells = row
+                    .split("|")
+                    .map((c: string) => c.trim())
+                    .filter((c: string) => c.length > 0);
+                  if (cells.length >= 1) {
+                    const first = cells[0];
+                    if (!/^(parameter|param|name|field)$/i.test(first))
+                      add(first);
+                  }
+                }
+              }
+            } catch {}
+            if (out.length) return out.filter((k) => !blacklist.test(k));
+            // Ultimate fallback: fetch full command schema and parse
+            try {
+              const schemaRes = await mcpService.callFunction(
+                serverId,
+                "ampp_show_command_schema",
+                { applicationType: app, command: normalizeCmd(cmd) },
+                { timeoutMs: 30000 }
+              );
+              const sText =
+                typeof schemaRes?.content?.[0]?.text === "string"
+                  ? schemaRes.content[0].text
+                  : "";
+              let sTrim = sText
+                .trim()
+                .replace(/^```[a-zA-Z]*\n?/i, "")
+                .replace(/```\s*$/i, "");
+              if (sTrim.startsWith("{") || sTrim.startsWith("[")) {
+                try {
+                  const parsed = JSON.parse(sTrim);
+                  const unwrapDeep = (obj: any): any => {
+                    if (!obj || typeof obj !== "object") return obj;
+                    if (obj.schema) return unwrapDeep(obj.schema);
+                    if (obj.request) {
+                      const r = obj.request;
+                      if (r.body) return unwrapDeep(r.body);
+                      if (r.payload) return unwrapDeep(r.payload);
+                      if (r.input) return unwrapDeep(r.input);
+                      return unwrapDeep(r);
+                    }
+                    if (obj.body) return unwrapDeep(obj.body);
+                    if (obj.payload) return unwrapDeep(obj.payload);
+                    if (obj.input) return unwrapDeep(obj.input);
+                    if (obj.parameters) return unwrapDeep(obj.parameters);
+                    return obj;
+                  };
+                  const inner = unwrapDeep(parsed);
+                  collectFromSchema(inner, "", parsed);
+                } catch {}
+              } else {
+                const maybe = tryParseJsonFromText(sTrim);
+                if (maybe) {
+                  const unwrapDeep = (obj: any): any => {
+                    if (!obj || typeof obj !== "object") return obj;
+                    if ((obj as any).schema)
+                      return unwrapDeep((obj as any).schema);
+                    if ((obj as any).request) {
+                      const r = (obj as any).request;
+                      if (r.body) return unwrapDeep(r.body);
+                      if (r.payload) return unwrapDeep(r.payload);
+                      if (r.input) return unwrapDeep(r.input);
+                      return unwrapDeep(r);
+                    }
+                    if ((obj as any).body) return unwrapDeep((obj as any).body);
+                    if ((obj as any).payload)
+                      return unwrapDeep((obj as any).payload);
+                    if ((obj as any).input)
+                      return unwrapDeep((obj as any).input);
+                    if ((obj as any).parameters)
+                      return unwrapDeep((obj as any).parameters);
+                    return obj;
+                  };
+                  const inner = unwrapDeep(maybe);
+                  collectFromSchema(inner, "", maybe);
+                }
+              }
+            } catch {}
+            return out.filter((k) => !blacklist.test(k));
+          } catch {
+            return [];
+          }
+        };
+
+        const coerceValue = (raw: string): any => {
+          const s = (raw || "")
+            .trim()
+            .replace(/^"|"$/g, "")
+            .replace(/^'|'$/g, "");
+          if (/^(true|false)$/i.test(s)) return /^true$/i.test(s);
+          if (/^-?\d+(?:\.\d+)?$/.test(s)) return Number(s);
+          return s;
+        };
+
+        const suggestAndInvokeWithParam = async (
+          app: string,
+          workloadName: string,
+          cmd: string,
+          paramKeyToUse: string,
+          valueRaw: string
+        ) => {
+          await ensureServer(serverId);
+          // Build a minimal payload: only the requested parameter (avoid adding optional fields)
+          const cmdNorm = normalizeCmd(cmd);
+          const finalPayload: any = {};
+          const setDeep = (obj: any, pathStr: string, val: any) => {
+            const parts = pathStr.split(".").filter(Boolean);
+            let cur = obj;
+            for (let i = 0; i < parts.length - 1; i++) {
+              const k = parts[i]!;
+              if (typeof cur[k] !== "object" || cur[k] === null) cur[k] = {};
+              cur = cur[k];
+            }
+            cur[parts[parts.length - 1] as string] = val;
+          };
+          setDeep(finalPayload, paramKeyToUse, coerceValue(valueRaw));
+          try {
+            progress("payload-suggest", "done", {
+              app,
+              command: cmd,
+              suggested: finalPayload,
+            });
+          } catch {}
+          // Optional: attempt validation (ignore failures, we still try to invoke)
+          try {
+            await mcpService.callFunction(
+              serverId,
+              "ampp_validate_payload",
+              { applicationType: app, command: cmdNorm, payload: finalPayload },
+              { timeoutMs: 8000 }
+            );
+          } catch {}
+          try {
+            progress("payload-override", "done", {
+              param: paramKeyToUse,
+              value: coerceValue(valueRaw),
+            });
+          } catch {}
+          const args = {
+            applicationType: app,
+            workloadName,
+            command: cmdNorm,
+            payload: finalPayload,
+          } as const;
+          try {
+            progress("invoke-attempt", "start", { args });
+          } catch {}
+          const result = await call("ampp_invoke_by_workload_name", {
+            ...args,
+          });
+          const respText = String((result as any)?.response || "");
+          if (/Command not found|app not cached/i.test(respText)) {
+            try {
+              progress("invoke-retry", "start", { reason: "cache-miss" });
+            } catch {}
+            try {
+              await mcpService.callFunction(
+                serverId,
+                "ampp_refresh_application_schemas",
+                {},
+                { timeoutMs: 20000 }
+              );
+            } catch {}
+            const args2 = { ...args, command: normalizeCmd(cmd) };
+            try {
+              progress("invoke-attempt", "start", { args: args2 });
+            } catch {}
+            return await call("ampp_invoke_by_workload_name", args2);
+          }
+          return result;
+        };
+        // Resolve pending selection for parameter-change flow
+        const sessionId = chatMessage.sessionId;
+        const pending = pendingParamOps[sessionId];
+        if (pending) {
+          // If user mentions one of the candidate command names, proceed
+          const mention = pending.candidates.find((c) =>
+            new RegExp(`\\b${c}\\b`, "i").test(message)
+          );
+          if (mention) {
+            delete pendingParamOps[sessionId];
+            logger.info("🧩 Resuming param-change flow with chosen command", {
+              command: mention,
+            });
+            const key =
+              pending.matchedParamByCommand?.[mention] || pending.param;
+            return await suggestAndInvokeWithParam(
+              pending.app,
+              pending.workloadName,
+              mention,
+              key,
+              pending.valueRaw
+            );
+          }
+          // If not matched, gently prompt again listing options
+          return {
+            success: true,
+            response: `Please specify which command to use for parameter "${
+              pending.param
+            }": ${pending.candidates.join(", ")}`,
+          };
+        }
+
+        // New NL route: multi-parameter update in one go
+        // Examples:
+        //  - set Program to true and Index to 1 on MiniMixer "DanDMMaws"
+        //  - change Preview=false, Program=true for MiniMixer "DanDMMaws"
+        {
+          const mm = message.match(
+            /(?:set|change|update)\s+((?:[A-Za-z0-9_.-]+\s*(?:=|to)\s*(?:"[^"]+"|'[^']+'|[^,]+?)(?:\s*(?:,|\s+and\s+)\s*)?)+)\s+(?:on|for|in)\s+([\w.-]+)\s+(?:"([^"]+)"|(.+?))\s*$/i
+          );
+          if (mm) {
+            const assignmentsRaw = String(mm[1] || "");
+            const app: string = String(mm[2] || "");
+            const workloadName = sanitizeWorkloadName(String(mm[3] || mm[4] || ""));
+            // Parse pairs like: Param to Value, Param=Value, separated by comma or 'and'
+            const pairRe = /([A-Za-z0-9_.-]+)\s*(?:=|to)\s*("[^"]+"|'[^']+'|[^,]+?)(?=\s*(?:,|\s+and\s+|$))/gi;
+            const pairs: Array<{ name: string; valueRaw: string }> = [];
+            let pm: RegExpExecArray | null;
+            while ((pm = pairRe.exec(assignmentsRaw))) {
+              const name = (pm[1] || "").trim();
+              let val = (pm[2] || "").trim();
+              // strip surrounding quotes
+              val = val.replace(/^"|"$/g, "").replace(/^'|'$/g, "");
+              pairs.push({ name, valueRaw: val });
+            }
+            if (!pairs.length) {
+              return { success: true, response: "Couldn't parse any parameter assignments." };
+            }
+            logger.info("🧩 NL route -> multi-param update", { app, workloadName, pairs });
+            try { progress("param-scan", "start", { app, workloadName, param: pairs.map(p=>p.name).join(", ") }); } catch {}
+
+            await ensureServer(serverId);
+            try { await mcpService.callFunction(serverId, "ampp_refresh_application_schemas", {}, { timeoutMs: 20000 }); } catch {}
+
+            const cmds = await listCommands(app);
+            if (!cmds.length) {
+              return { success: true, response: `No commands found for ${app}. Try 'list the commands for ${app}'.` };
+            }
+
+            // Helper: find best match for a requested param within a params list
+            const matchParam = (wanted: string, params: string[]): { key?: string | undefined; score: number } => {
+              const w = wanted.toLowerCase();
+              const aliases = new Set<string>([w]);
+              if (w === "color" || w === "colour") {
+                ["colour","color","colorspace","colourspace","color space","colour space"].forEach(a=>aliases.add(a));
+              }
+              let best: { key?: string | undefined; score: number } = { key: undefined, score: 0 };
+              for (const p of params) {
+                const low = p.toLowerCase();
+                const tail = p.split(".").pop()!.toLowerCase();
+                // exact
+                if (aliases.has(low)) { if (best.score < 3) best = { key: p, score: 3 }; continue; }
+                // tail exact
+                if (aliases.has(tail)) { if (best.score < 2) best = { key: p, score: 2 }; continue; }
+                // contains
+                for (const a of aliases) {
+                  if (low.includes(a) || tail.includes(a)) { if (best.score < 1) best = { key: p, score: 1 }; break; }
+                }
+              }
+              return best;
+            };
+
+            // Preload params for each command once
+            const paramsByCmd: Record<string, string[]> = {};
+            for (let i = 0; i < cmds.length; i++) {
+              const c = cmds[i]!;
+              try { progress("param-scan-cmd", "start", { command: c, index: i+1, total: cmds.length }); } catch {}
+              const params = await listParamsForCommand(app, c);
+              paramsByCmd[c] = params;
+              try { progress("param-scan-cmd", "done", { command: c, index: i+1, total: cmds.length, params }); } catch {}
+            }
+
+            // Find command with maximum coverage
+            let bestCmd: string | undefined;
+            let bestCoverage = -1;
+            let bestScoreSum = -1;
+            let bestMatches: Record<string, string> = {};
+            for (const c of cmds) {
+              const params = paramsByCmd[c] || [];
+              let covered = 0; let sum = 0; const map: Record<string,string> = {};
+              for (const pair of pairs) {
+                const { key, score } = matchParam(pair.name, params);
+                if (key) { covered++; sum += score; map[pair.name] = key; }
+              }
+              if (covered > bestCoverage || (covered === bestCoverage && sum > bestScoreSum)) {
+                bestCoverage = covered; bestScoreSum = sum; bestCmd = c; bestMatches = map;
+              }
+            }
+
+            const setDeep = (obj: any, pathStr: string, val: any) => {
+              const parts = String(pathStr||"").split(".").filter(Boolean);
+              let cur = obj; for (let i=0;i<parts.length-1;i++){ const k=parts[i]!; if (typeof cur[k] !== "object" || cur[k] === null) cur[k] = {}; cur = cur[k]; }
+              cur[parts[parts.length-1] as string] = val;
+            };
+
+            const invokeOne = async (command: string, groupPairs: Array<{name:string; valueRaw:string}>) => {
+              const cmdNorm = normalizeCmd(command);
+              const finalPayload: any = {};
+              for (const pr of groupPairs) {
+                const matchedKey = (paramsByCmd[command] ? matchParam(pr.name, paramsByCmd[command]!).key : undefined) || pr.name;
+                setDeep(finalPayload, matchedKey, coerceValue(pr.valueRaw));
+                try { progress("payload-override", "done", { param: matchedKey, value: coerceValue(pr.valueRaw) }); } catch {}
+              }
+              try { progress("payload-suggest", "done", { app, command: cmdNorm, suggested: finalPayload }); } catch {}
+              // validate (best effort)
+              try { await mcpService.callFunction(serverId, "ampp_validate_payload", { applicationType: app, command: cmdNorm, payload: finalPayload }, { timeoutMs: 8000 }); } catch {}
+              // invoke with retry
+              const args = { applicationType: app, workloadName, command: cmdNorm, payload: finalPayload } as const;
+              try { progress("invoke-attempt", "start", { args }); } catch {}
+              const result = await call("ampp_invoke_by_workload_name", { ...args });
+              const respText = String((result as any)?.response || "");
+              if (/Command not found|app not cached/i.test(respText)) {
+                try { progress("invoke-retry", "start", { reason: "cache-miss" }); } catch {}
+                try { await mcpService.callFunction(serverId, "ampp_refresh_application_schemas", {}, { timeoutMs: 20000 }); } catch {}
+                const args2 = { ...args, command: normalizeCmd(command) };
+                try { progress("invoke-attempt", "start", { args: args2 }); } catch {}
+                return await call("ampp_invoke_by_workload_name", args2);
+              }
+              return result;
+            };
+
+            // If best command covers all pairs, do one invoke
+            if (bestCmd && bestCoverage === pairs.length) {
+              const orderedPairs = pairs.map(p => ({ name: bestMatches[p.name] || p.name, valueRaw: p.valueRaw }));
+              const res = await invokeOne(bestCmd, orderedPairs);
+              return res;
+            }
+
+            // Else, group pairs by best command per param and invoke per group
+            const groupByCmd: Record<string, Array<{name:string; valueRaw:string}>> = {};
+            for (const pr of pairs) {
+              let bestForParam: { cmd?: string; score: number; key?: string | undefined } = { score: -1 };
+              for (const c of cmds) {
+                const m = matchParam(pr.name, paramsByCmd[c] || []);
+                if (m.score > bestForParam.score) bestForParam = { cmd: c, score: m.score, key: m.key };
+              }
+              const fallbackCmd = bestCmd || (cmds.length ? cmds[0]! : undefined);
+              const chosenCmd = (bestForParam.cmd || fallbackCmd) as string;
+              if (!groupByCmd[chosenCmd]) groupByCmd[chosenCmd] = [];
+              groupByCmd[chosenCmd]!.push({ name: bestForParam.key || pr.name, valueRaw: pr.valueRaw });
+            }
+
+            const results: string[] = [];
+            for (const [cmdName, group] of Object.entries(groupByCmd)) {
+              const r = await invokeOne(cmdName, group);
+              results.push(String((r as any)?.response || ""));
+            }
+            return { success: true, response: results.join("\n") };
+          }
+        }
+
+        // New NL route: parameter-based invoke discovery
+        // Example: "invoke change color parameter on testsignalgenerator \"DanDTSG2 1\" to Blue"
+        {
+          const mm = message.match(
+            /(?:invoke|set|change|update)\s+(?:the\s+)?([A-Za-z0-9_.-]+)\s+(?:parameter|param|field)\s+(?:on|for|in)\s+([\w.-]+)\s+(?:"([^"]+)"|(.+?))\s+(?:to|=)\s+(.+)$/i
+          );
+          if (mm) {
+            const param: string = String(mm[1] ?? "");
+            const app: string = String(mm[2] ?? "");
+            const workloadName: string = String(mm[3] ?? mm[4] ?? "").trim();
+            const valueRaw: string = String(mm[5] ?? "").trim();
+            logger.info("🧩 NL route -> param-change discovery", {
+              app,
+              param,
+              workloadName,
+              valueRaw,
+            });
+            try {
+              progress("param-scan", "start", {
+                app,
+                param,
+                workloadName,
+                valueRaw,
+              });
+            } catch {}
+            try {
+              await ensureServer(serverId);
+              await mcpService.callFunction(
+                serverId,
+                "ampp_refresh_application_schemas",
+                {},
+                { timeoutMs: 20000 }
+              );
+            } catch {}
+            // 1) Discover commands for the app
+            const cmds = await listCommands(app);
+            try {
+              progress("param-candidates", "done", { commands: cmds });
+            } catch {}
+            if (!cmds.length) {
+              return {
+                success: true,
+                response: `No commands found for ${app}. Try 'list the commands for ${app}'.`,
+              };
+            }
+            // 2) Scan each command's parameters for a match
+            const matches: string[] = [];
+            const matchedParamByCommand: Record<string, string> = {};
+            const wanted = param.toLowerCase();
+            const aliases = new Set<string>([wanted]);
+            // handle color/colour common alias + variants
+            if (wanted === "color" || wanted === "colour") {
+              [
+                "colour",
+                "color",
+                "colorspace",
+                "colourspace",
+                "color space",
+                "colour space",
+                "colorspace",
+                "colourspace",
+              ].forEach((a) => aliases.add(a));
+            }
+            const allParams: string[] = [];
+            for (let i = 0; i < cmds.length; i++) {
+              const c = cmds[i]!;
+              try {
+                progress("param-scan-cmd", "start", {
+                  command: c,
+                  index: i + 1,
+                  total: cmds.length,
+                });
+              } catch {}
+              const params = await listParamsForCommand(app, c);
+              try {
+                progress("param-scan-cmd", "done", {
+                  command: c,
+                  index: i + 1,
+                  total: cmds.length,
+                  params,
+                });
+              } catch {}
+              if (!params.length) continue;
+              for (const p of params)
+                if (!allParams.includes(p)) allParams.push(p);
+              // prefer exact case-insensitive match; else contains; also try aliases and nested paths
+              let chosen: string | undefined;
+              for (const p of params) {
+                const low = p.toLowerCase();
+                if (aliases.has(low)) {
+                  chosen = p;
+                  break;
+                }
+                // support nested path: key or trailing segment matches
+                const tail = p.split(".").pop()!.toLowerCase();
+                if (aliases.has(tail)) {
+                  chosen = p;
+                  break;
+                }
+              }
+              if (!chosen) {
+                for (const p of params) {
+                  const low = p.toLowerCase();
+                  for (const a of aliases) {
+                    if (
+                      low.includes(a) ||
+                      p.split(".").pop()!.toLowerCase().includes(a)
+                    ) {
+                      chosen = p;
+                      break;
+                    }
+                  }
+                  if (chosen) break;
+                }
+              }
+              if (chosen) {
+                matches.push(c);
+                matchedParamByCommand[c] = chosen; // remember exact key
+              }
+            }
+            try {
+              progress("param-matches", "done", { matches });
+            } catch {}
+            if (matches.length === 0) {
+              // Offer suggestions based on closest parameter keys (full and tail segments)
+              const keys = Array.from(
+                new Set(
+                  allParams.concat(
+                    allParams.map((p) => p.split(".").pop() || p)
+                  )
+                )
+              );
+              const ranked = rankClosest(param, keys).slice(0, 10);
+              try {
+                progress("param-suggestions", "done", { suggestions: ranked });
+              } catch {}
+              return {
+                success: true,
+                response: `Couldn't find any command in ${app} with a parameter matching "${param}". Closest parameters: ${ranked.join(
+                  ", "
+                )}`,
+              };
+            }
+            if (matches.length === 1) {
+              // 3) Single match: suggest payload -> override -> invoke
+              const chosen: string = matches[0] as string;
+              logger.info("🧩 Param-change resolved to single command", {
+                command: chosen,
+              });
+              try {
+                progress("param-chosen", "done", { command: chosen });
+              } catch {}
+              const paramKey = matchedParamByCommand[chosen] || param;
+              return await suggestAndInvokeWithParam(
+                app,
+                workloadName,
+                chosen,
+                paramKey,
+                valueRaw
+              );
+            }
+            // 4) Multiple matches: ask user which command to use and stash context
+            pendingParamOps[sessionId] = {
+              app,
+              workloadName,
+              param,
+              valueRaw,
+              candidates: matches.slice(0, 10),
+              matchedParamByCommand,
+            };
+            return {
+              success: true,
+              response: `Multiple commands in ${app} include parameter "${param}": ${matches.join(
+                ", "
+              )}. Which should I use?`,
+            };
+          }
+        }
 
         // Helper: MCP guidance if user intent mentions AMPP/ClipPlayer but no specific pattern matched
         const mcpGuidance = async () => {
@@ -389,6 +1359,8 @@ class GVAIBotApp {
             "- show the schema for <app>.<command>",
             "- suggest a payload for <app>.<command>",
             "- list workloads for <app>",
+            "- list workload names for <app>",
+            "- list all application types",
             "- set clipplayer workload to <workloadId>",
             "- play | pause | seek 100 | set rate 2 | shuttle -4",
             "- show clipplayer examples",
@@ -443,6 +1415,8 @@ class GVAIBotApp {
           return { success: true, response: mcpExamplesText() };
         }
 
+        // moved: generic app.command suggestion runs later, after explicit routes
+
         // AMPP schema and commands
         let m;
         if (
@@ -451,7 +1425,7 @@ class GVAIBotApp {
           logger.info("🧩 NL route -> ampp_list_commands_for_application", {
             app: m[1],
           });
-          const app = m[1];
+          const app = m[1]!;
           try {
             await ensureServer(serverId);
             await mcpService.callFunction(
@@ -483,11 +1457,45 @@ class GVAIBotApp {
         ) {
           logger.info("🧩 NL route -> ampp_show_command_schema", {
             app: m[1],
-            command: m[2],
+            command: normalizeCmd(m[2]!),
           });
           return await call("ampp_show_command_schema", {
             applicationType: m[1],
-            command: m[2],
+            command: normalizeCmd(m[2]!),
+          });
+        }
+        // Parameters intent: list/get/what are parameters for <app>.<command> (support 'params' alias)
+        if (
+          (m = message.match(
+            /(?:list|show|get|what (?:are|r) (?:the )?)\s*(?:parameters|params)\s+(?:for\s+)?([\w.-]+)\.([A-Za-z0-9_-]+)(?:@\d+(?:\.\d+)*)?/i
+          ))
+        ) {
+          const app = m[1]!;
+          const cmd = normalizeCmd(m[2]!);
+          logger.info("🧩 NL route -> ampp_get_parameters", {
+            app,
+            command: cmd,
+          });
+          return await call("ampp_get_parameters", {
+            applicationType: app,
+            command: cmd,
+          });
+        }
+        // Show just the required parameters for an app command
+        if (
+          (m = message.match(
+            /show (?:me )?(?:the )?required parameters for\s+([\w.-]+)\.?([\w-]+)/i
+          ))
+        ) {
+          const app = m[1]!;
+          const cmd = m[2];
+          logger.info("🧩 NL route -> ampp_get_required_parameters", {
+            app,
+            command: cmd,
+          });
+          return await call("ampp_get_required_parameters", {
+            applicationType: app,
+            command: cmd,
           });
         }
         if (
@@ -495,18 +1503,28 @@ class GVAIBotApp {
         ) {
           logger.info("🧩 NL route -> ampp_suggest_payload", {
             app: m[1],
-            command: m[2],
+            command: normalizeCmd(m[2]!),
           });
           return await call("ampp_suggest_payload", {
             applicationType: m[1],
-            command: m[2],
+            command: normalizeCmd(m[2]!),
           });
         }
-        if (/^list (?:all )?application types/i.test(message)) {
-          logger.info("🧩 NL route -> ampp_list_application_types");
-          return await call("ampp_list_application_types");
+        // Flexible phrasing for listing commands
+        if (
+          (m = message.match(
+            /(list|show)\s+(?:me\s+)?(?:all\s+)?(?:the\s+)?commands (?:for|in)\s+([\w.-]+)(?:\s+with\s+summaries?)?/i
+          ))
+        ) {
+          logger.info("🧩 NL route -> ampp_list_commands_for_application", {
+            app: m[2],
+          });
+          const includeSummary = /with\s+summaries?/i.test(message);
+          return await call("ampp_list_commands_for_application", {
+            applicationType: m[2],
+            includeSummary,
+          });
         }
-        // Workloads discovery
         if (
           (m = message.match(
             /list(?:\s+all)?\s+workloads(?:\s+for\s+([\w.-]+))?/i
@@ -519,6 +1537,13 @@ class GVAIBotApp {
           }
           logger.info("🧩 NL route -> ampp_list_all_workloads");
           return await call("ampp_list_all_workloads", {});
+        }
+        // List application types
+        if (
+          (m = message.match(/(?:list|show)\s+(?:all\s+)?application types/i))
+        ) {
+          logger.info("🧩 NL route -> ampp_list_application_types");
+          return await call("ampp_list_application_types", {});
         }
         if (
           (m = message.match(/list (?:all )?workload names for\s+([\w.-]+)/i))
@@ -534,13 +1559,17 @@ class GVAIBotApp {
             applicationType: "ClipPlayer",
           });
         }
-        if ((m = message.match(/set clipplayer workload to\s+([\w-]+)/i))) {
+        if (
+          (m = message.match(
+            /set clipplayer workload to\s+(?:"([^"]+)"|([^\s]+))/i
+          ))
+        ) {
           logger.info("🧩 NL route -> set_active_workload (ClipPlayer)", {
-            workloadId: m[1],
+            workloadId: m[1] || m[2],
           });
           return await call("set_active_workload", {
             applicationType: "ClipPlayer",
-            workloadId: m[1],
+            workloadId: m[1] || m[2],
           });
         }
         if (/get clipplayer workload/i.test(message)) {
@@ -551,59 +1580,172 @@ class GVAIBotApp {
         }
         if (
           (m = message.match(
-            /set active workload for\s+([\w.-]+)\s+to\s+([\w-]+)/i
+            /set active workload for\s+([\w.-]+)\s+to\s+(?:"([^"]+)"|([^\s]+))/i
           ))
         ) {
           logger.info("🧩 NL route -> set_active_workload", {
             app: m[1],
-            workloadId: m[2],
+            workloadId: m[2] || m[3],
           });
           return await call("set_active_workload", {
             applicationType: m[1],
-            workloadId: m[2],
+            workloadId: m[2] || m[3],
           });
         }
         if ((m = message.match(/get active workload for\s+([\w.-]+)/i))) {
           logger.info("🧩 NL route -> get_active_workload", { app: m[1] });
           return await call("get_active_workload", { applicationType: m[1] });
         }
+        // Invoke by workload name: dot form "invoke MiniMixer.controlstate on DanDMMaws {json}" or space form "invoke MiniMixer controlstate for DanDMMaws"
+        // 1) Dot form
+        if (
+          (m = message.match(
+            /(?:invoke|run|send(?:ing)?(?:\s+command)?)\s+([\w.-]+)\.(\w+)\s+(?:on|to|for)\s+(?:"([^"]+)"|(.+?))(?=\s*(?:payload\s*[:=]\s*)?\{|\s*$)/i
+          ))
+        ) {
+          const app = m[1]!;
+          const cmd = normalizeCmd(m[2]!);
+          const workloadNameRaw = m[3] || m[4] || "";
+          const workloadName = sanitizeWorkloadName(workloadNameRaw);
+          const { obj, error } = extractJson(message);
+          if (error) return { success: true, response: error };
+          logger.info("🧩 NL route -> ampp_invoke_by_workload_name", {
+            app,
+            command: cmd,
+            workloadName,
+          });
+          let res = await call("ampp_invoke_by_workload_name", {
+            applicationType: app,
+            workloadName,
+            command: cmd,
+            // If no JSON payload provided, omit it so server defaults to {}
+            ...(obj ? { payload: obj } : {}),
+          });
+          let respText = String((res as any)?.response || "");
+          if (/Command not found|app not cached/i.test(respText)) {
+            // Retry once after refreshing schemas for reliability
+            try {
+              await call("ampp_refresh_application_schemas", {});
+              res = await call("ampp_invoke_by_workload_name", {
+                applicationType: app,
+                workloadName,
+                command: cmd,
+                ...(obj ? { payload: obj } : {}),
+              });
+              respText = String((res as any)?.response || "");
+            } catch {}
+          }
+          if (/Command not found|app not cached/i.test(respText)) {
+            const cmds = await listCommands(app);
+            if (cmds.length) {
+              const ranked = rankClosest(cmd, cmds).slice(0, 10);
+              return {
+                success: true,
+                response: `Unknown command "${cmd}" for ${app}. Try one of: ${ranked.join(
+                  ", "
+                )}`,
+              };
+            }
+          }
+          return res;
+        }
+        // 2) Space form
+        if (
+          (m = message.match(
+            /(?:invoke|run|send(?:ing)?(?:\s+command)?)\s+([\w.-]+)\s+([A-Za-z0-9_-]+)\s+(?:on|to|for)\s+(?:"([^"]+)"|(.+?))(?=\s*(?:payload\s*[:=]\s*)?\{|\s*$)/i
+          ))
+        ) {
+          const app: string = m[1]!;
+          const cmd = normalizeCmd(m[2]!);
+          const workloadNameRaw = m[3] || m[4] || "";
+          const workloadName = sanitizeWorkloadName(workloadNameRaw);
+          const { obj, error } = extractJson(message);
+          if (error) return { success: true, response: error };
+          logger.info(
+            "🧩 NL route -> ampp_invoke_by_workload_name (space form)",
+            {
+              app,
+              command: cmd,
+              workloadName,
+            }
+          );
+          let res = await call("ampp_invoke_by_workload_name", {
+            applicationType: app,
+            workloadName,
+            command: cmd,
+            ...(obj ? { payload: obj } : {}),
+          });
+          let respText = String((res as any)?.response || "");
+          if (/Command not found|app not cached/i.test(respText)) {
+            // Retry once after refreshing schemas for reliability
+            try {
+              await call("ampp_refresh_application_schemas", {});
+              res = await call("ampp_invoke_by_workload_name", {
+                applicationType: app,
+                workloadName,
+                command: cmd,
+                ...(obj ? { payload: obj } : {}),
+              });
+              respText = String((res as any)?.response || "");
+            } catch {}
+          }
+          if (/Command not found|app not cached/i.test(respText)) {
+            const cmds = await listCommands(app);
+            if (cmds.length) {
+              const ranked = rankClosest(cmd, cmds).slice(0, 10);
+              return {
+                success: true,
+                response: `Unknown command "${cmd}" for ${app}. Try one of: ${ranked.join(
+                  ", "
+                )}`,
+              };
+            }
+          }
+          return res;
+        }
         if (
           (m = message.match(
             /invoke\s+([\w.-]+)\.(\w+)\s+(?:with )?({[\s\S]*})/i
           ))
         ) {
-          const app = m[1],
-            cmd = m[2];
+          const app: string = m[1]!;
+          const cmd = normalizeCmd(m[2]!);
           const { obj, error } = extractJson(m[0]);
           if (error) return { success: true, response: error };
           logger.info("🧩 NL route -> ampp_invoke", { app, command: cmd });
           return await call("ampp_invoke", {
             applicationType: app,
             command: cmd,
-            payload: obj || {},
+            ...(obj ? { payload: obj } : {}),
           });
         }
         if (
           (m = message.match(
-            /send control message .*?workload\s+([\w-]+).*?app(?:lication)?\s+([\w.-]+).*?(?:schema|command)\s+(\w+)/i
+            /send control message .*?workload\s+(?:"([^"]+)"|(.+?))\s+app(?:lication)?\s+([\w.-]+).*?(?:schema|command)\s+(\w+)/i
           ))
         ) {
           const { obj } = extractJson(message);
+          const workloadNameRaw2 = m[1] || m[2] || "";
+          const workloadName = sanitizeWorkloadName(workloadNameRaw2);
+          const app = m[3];
+          const cmd = normalizeCmd(m[4]!);
           logger.info(
-            "🧩 NL route -> ampp_invoke (from NL 'send control message')",
-            { workloadId: m[1], app: m[2], command: m[3] }
+            "🧩 NL route -> ampp_invoke_by_workload_name (from NL 'send control message')",
+            { workloadName, app, command: cmd }
           );
-          return await call("ampp_invoke", {
-            workloadId: m[1],
-            applicationType: m[2],
-            command: m[3],
+          return await call("ampp_invoke_by_workload_name", {
+            workloadName,
+            applicationType: app,
+            command: cmd,
             payload: obj || {},
           });
         }
-        if ((m = message.match(/get ampp state for\s+([\w-]+)/i))) {
+        if (
+          (m = message.match(/get ampp state for\s+(?:"([^"]+)"|([^\s]+))/i))
+        ) {
           logger.info(
             "ℹ️ NL route deprecated -> ampp_get_state (no longer available)",
-            { workloadId: m[1] }
+            { workloadId: m[1] || m[2] }
           );
           return {
             success: true,
@@ -617,14 +1759,12 @@ class GVAIBotApp {
         }
         if ((m = message.match(/execute macro\s+(.+)/i))) {
           const name = m && m[1] ? m[1].trim() : "";
-          if (!name) {
+          if (pending) {
             return { success: true, response: "Please provide a macro name." };
           }
           logger.info("🧩 NL route -> ampp_execute_macro_by_name", { name });
           return await call("ampp_execute_macro_by_name", { name });
         }
-
-        // ClipPlayer controls
         if (
           (m = message.match(
             /load clip(?:\s+(?:file|from file)\s+(.+)|\s+id\s+([\w-]+)|\s+(.+))/i
@@ -684,6 +1824,44 @@ class GVAIBotApp {
         if (/clear assets/i.test(message)) {
           return await call("clear_assets");
         }
+        // If user typed something like "app.command ..." but no explicit pattern matched above, suggest closest app/cmd
+        {
+          const ac = message.match(/([A-Za-z][\w.-]+)\.([A-Za-z0-9_-]+)/);
+          if (ac && ac[1] && ac[2]) {
+            const reqApp = String(ac[1]);
+            const reqCmd = String(ac[2]);
+            const apps = await listAppTypes();
+            if (apps.length) {
+              const foundApp = apps.find(
+                (a) => a.toLowerCase() === reqApp.toLowerCase()
+              );
+              if (!foundApp) {
+                const ranked = rankClosest(reqApp, apps).slice(0, 5);
+                return {
+                  success: true,
+                  response: `Unknown application "${reqApp}". Did you mean: ${ranked.join(
+                    ", "
+                  )}?`,
+                };
+              }
+              const cmds = await listCommands(foundApp);
+              if (cmds.length) {
+                const hasCmd = cmds.some(
+                  (c) => c.toLowerCase() === reqCmd.toLowerCase()
+                );
+                if (!hasCmd) {
+                  const ranked = rankClosest(reqCmd, cmds).slice(0, 10);
+                  return {
+                    success: true,
+                    response: `Unknown command "${reqCmd}" for ${foundApp}. Try one of: ${ranked.join(
+                      ", "
+                    )}`,
+                  };
+                }
+              }
+            }
+          }
+        }
         if (
           (m = message.match(
             /set transport (?:(?:position|pos)\s*(\d+))?(?:.*?in\s*(\d+))?(?:.*?out\s*(\d+))?(?:.*?rate\s*(-?\d+(?:\.\d+)?))?(?:.*?(loop|repeat|recue))?/i
@@ -715,13 +1893,24 @@ class GVAIBotApp {
         }
 
         // Get AI response (default)
+        progress("ai-process", "start");
         const response = await aiService.processMessage(message);
+        progress("ai-process", "done");
         logger.info("🤖 AI response generated successfully");
-
         return { success: true, response };
       } catch (error: any) {
         logger.error("❌ Error processing chat message:", error);
+        opOk = false;
         return { success: false, error: error?.message || "Unknown error" };
+      } finally {
+        try {
+          event.sender.send("chat:progress", {
+            step: "complete",
+            state: opOk ? "done" : "error",
+            ts: Date.now(),
+            opId,
+          });
+        } catch {}
       }
     });
 
@@ -859,9 +2048,7 @@ class GVAIBotApp {
                   return { success: false, error: e?.message || String(e) };
                 }
               })();
-              const reply = res.success
-                ? res.response
-                : `Error: ${res.error}`;
+              const reply = res.success ? res.response : `Error: ${res.error}`;
               // Speak the reply via Realtime
               if (typeof reply === "string") {
                 realtimeService?.createAudioResponse({ instructions: reply });

@@ -680,7 +680,8 @@ body {
   overflow: hidden;
   pointer-events: auto;
   min-height: 540px;
-  max-height: calc(100vh - 120px);
+  /* Use a fixed height so inner columns can properly scroll */
+  height: calc(100vh - 120px);
 }
 
 .mcp-server-column { border-right: 1px solid var(--border-color); display: flex; flex-direction: column; min-height: 0; }
@@ -767,7 +768,9 @@ body {
 .result-wrapper { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 12px 14px 16px; display: flex; flex-direction: column; gap: 10px; }
 .result-header { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; letter-spacing: .5px; color: var(--text-secondary); }
 .result-tools { display: flex; gap: 4px; }
-.result-pre { max-height: 240px; overflow: auto; font-family: var(--font-mono); font-size: 0.7rem; line-height: 1.4; padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--border-radius); }
+.result-pre { max-height: min(50vh, 560px); overflow: auto; font-family: var(--font-mono); font-size: 0.7rem; line-height: 1.4; padding: 10px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: var(--border-radius); }
+/* Wrap very long lines in result for readability and to preserve vertical scrolling */
+.result-pre { white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
 
 /* History */
 .history-section { margin-top: 4px; display: flex; flex-direction: column; gap: 10px; }
@@ -800,7 +803,8 @@ body {
 }
 @media (max-width: 860px) {
   .mcp-panel { padding: 70px 20px 30px; }
-  .mcp-layout { display: flex; flex-direction: column; max-height: none; height: auto; }
+  /* Keep a fixed viewport-constrained height so inner sections can scroll even on small screens */
+  .mcp-layout { display: flex; flex-direction: column; height: calc(100vh - 140px); max-height: none; overflow: hidden; }
   .mcp-server-column { border-right: none; border-bottom: 1px solid var(--border-color); }
   .mcp-detail-column { padding: 18px 20px 30px; }
 }

@@ -13,16 +13,52 @@ contextBridge.exposeInMainWorld("electronAPI", {
   chat: {
     sendMessage: (message: string) =>
       ipcRenderer.invoke("chat:send-message", message),
+    onProgress: (
+      handler: (payload: {
+        step: string;
+        state: "start" | "done" | "error";
+        info?: any;
+        ts: number;
+        opId?: string;
+      }) => void
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: {
+          step: string;
+          state: "start" | "done" | "error";
+          info?: any;
+          ts: number;
+          opId?: string;
+        }
+      ) => handler(payload);
+      ipcRenderer.on("chat:progress", listener);
+      return () => ipcRenderer.removeListener("chat:progress", listener);
+    },
     onNewChat: (callback: () => void) => {
       const cleanup = () => ipcRenderer.removeAllListeners("chat:new");
       ipcRenderer.on("chat:new", callback);
       return cleanup;
     },
+    onAssistantMessage: (
+      handler: (payload: { content: string; source?: string }) => void
+    ) => {
+      const listener = (
+        _e: Electron.IpcRendererEvent,
+        payload: { content: string; source?: string }
+      ) => handler(payload);
+      ipcRenderer.on("chat:assistant-message", listener);
+      return () =>
+        ipcRenderer.removeListener("chat:assistant-message", listener);
+    },
   },
 
   // AI configuration
-      speak: (text?: string) =>
-        ipcRenderer.invoke("realtime:create-audio-response", text ? { instructions: text } : undefined),
+  speak: (text?: string) =>
+    ipcRenderer.invoke(
+      "realtime:create-audio-response",
+      text ? { instructions: text } : undefined
+    ),
   ai: {
     updateKeys: (keys: {
       openaiKey?: string;
@@ -72,9 +108,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
         audioBase64,
         sampleRate,
       }),
-    commit: (params?: { instructions?: string }) =>
+    commit: (params?: { instructions?: string; text?: string }) =>
       ipcRenderer.invoke("realtime:commit", params || {}),
     send: (ev: any) => ipcRenderer.invoke("realtime:send", ev || {}),
+    barge: () => ipcRenderer.invoke("realtime:barge"),
     onEvent: (handler: (payload: any) => void) => {
       const listener = (_e: Electron.IpcRendererEvent, payload: any) =>
         handler(payload);
@@ -127,6 +164,18 @@ declare global {
           message: string
         ) => Promise<{ success: boolean; response?: string; error?: string }>;
         onNewChat: (callback: () => void) => () => void;
+        onProgress: (
+          handler: (payload: {
+            step: string;
+            state: "start" | "done" | "error";
+            info?: any;
+            ts: number;
+            opId?: string;
+          }) => void
+        ) => () => void;
+        onAssistantMessage: (
+          handler: (payload: { content: string; source?: string }) => void
+        ) => () => void;
       };
       ai: {
         updateKeys: (keys: {
@@ -169,8 +218,12 @@ declare global {
           audioBase64: string,
           sampleRate?: number
         ) => Promise<any>;
-        commit: (params?: { instructions?: string }) => Promise<any>;
+        commit: (params?: {
+          instructions?: string;
+          text?: string;
+        }) => Promise<any>;
         send: (ev: any) => Promise<any>;
+        barge: () => Promise<any>;
         onEvent: (handler: (payload: any) => void) => () => void;
       };
       mcp: {

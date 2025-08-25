@@ -50,6 +50,38 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({
               />
               <span>Enable Voice Input</span>
             </label>
+            <div style={{ marginTop: 10 }}>
+              <label style={{ display: "block", fontSize: 12, opacity: 0.85 }}>
+                Mic Boost: {Math.round((settings.micBoost ?? 2) * 100)}%
+              </label>
+              <input
+                type="range"
+                min={0.5}
+                max={4}
+                step={0.1}
+                value={settings.micBoost ?? 2}
+                onChange={(e) =>
+                  onSettingsChange({ micBoost: Number(e.target.value) })
+                }
+                style={{ width: "100%" }}
+              />
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <label style={{ display: "block", fontSize: 12, opacity: 0.85 }}>
+                VAD Sensitivity
+              </label>
+              <select
+                value={settings.vadSensitivity ?? "medium"}
+                onChange={(e) =>
+                  onSettingsChange({ vadSensitivity: e.target.value as any })
+                }
+                className="setting-select"
+              >
+                <option value="low">Low (noisy room)</option>
+                <option value="medium">Medium</option>
+                <option value="high">High (quiet room)</option>
+              </select>
+            </div>
           </div>
 
           <div className="setting-group">

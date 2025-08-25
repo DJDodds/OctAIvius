@@ -168,17 +168,22 @@ export class MCPService {
   async callFunction(
     serverId: string,
     functionName: string,
-    args: any
+    args: any,
+    options?: { timeoutMs?: number }
   ): Promise<any> {
     this.logger.info("Calling MCP function:", { serverId, functionName, args });
     // Routed to child process if available
     const child = this.processMap.get(serverId);
     if (child) {
       try {
-        return await child.sendRequest("tools/call", {
-          name: functionName,
-          arguments: args,
-        });
+        return await child.sendRequest(
+          "tools/call",
+          {
+            name: functionName,
+            arguments: args,
+          },
+          options?.timeoutMs
+        );
       } catch (e) {
         this.logger.error(
           `Child MCP call failed (${serverId}:${functionName})`,

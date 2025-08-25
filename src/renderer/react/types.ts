@@ -12,6 +12,8 @@ export interface AppSettings {
   voiceEnabled: boolean;
   debugMode: boolean;
   theme: "light" | "dark";
+  micBoost?: number; // linear gain multiplier for mic input
+  vadSensitivity?: "low" | "medium" | "high"; // VAD thresholds preset
 }
 
 export interface VoiceSettings {

@@ -60,7 +60,7 @@ export async function getSuggestions(
   // If user typed only "/" or partial, suggest base commands + a few tools
   if (/^\/(?:m|mc|mcp|c|cl|cli|clip)?\s*$/i.test(trimmed)) {
     list.push(...baseCmds);
-    const tools = await ensureTools("clipplayer");
+    const tools = await ensureTools("ampp");
     const top = tools.slice(0, 5);
     for (const t of top) {
       const tpl = schemaToTemplate(t.inputSchema);
@@ -76,7 +76,7 @@ export async function getSuggestions(
   // If typing a specific MCP/clip command
   const m = trimmed.match(/^\/(mcp|clip)\s+([^\s{]*)\s*({[\s\S]*)?$/i);
   if (m) {
-    const serverId = "clipplayer";
+    const serverId = "ampp";
     const partial = (m[2] || "").toLowerCase();
     const tools = await ensureTools(serverId);
     const filtered = tools

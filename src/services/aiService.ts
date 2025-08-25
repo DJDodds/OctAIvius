@@ -49,7 +49,9 @@ export class AIService {
     // Prefer explicit OpenAI key; only fall back to config when provider is openai
     this.openaiApiKey =
       process.env.OPENAI_API_KEY ||
-      (config.ai.provider === "openai" ? (config.ai.apiKey as string | null) : null);
+      (config.ai.provider === "openai"
+        ? (config.ai.apiKey as string | null)
+        : null);
     this.anthropicApiKey = process.env.ANTHROPIC_API_KEY || null;
     this.geminiApiKey = process.env.GEMINI_API_KEY || null;
 
@@ -198,7 +200,7 @@ export class AIService {
       }
       this.logger.info("✅ Internet connectivity confirmed");
 
-  if (chosen === "gemini") {
+      if (chosen === "gemini") {
         if (!this.geminiApiKey) {
           this.logger.error("❌ No Gemini API key configured");
           return false;
@@ -215,7 +217,7 @@ export class AIService {
             : "❌ Gemini connection failed - no response"
         );
         return ok;
-  } else if (chosen === "openai") {
+      } else if (chosen === "openai") {
         if (!this.openaiClient) this.initializeOpenAI();
         const ok = await testOpenAI(
           this.logger,
@@ -228,7 +230,7 @@ export class AIService {
             : "❌ OpenAI connection failed - no response"
         );
         return ok;
-  } else if (chosen === "anthropic") {
+      } else if (chosen === "anthropic") {
         const ok = await testAnthropic(this.logger, this.anthropicApiKey);
         this.logger.info(
           ok
@@ -238,7 +240,7 @@ export class AIService {
         return ok;
       }
 
-  this.logger.error(`❌ Unknown provider: ${chosen}`);
+      this.logger.error(`❌ Unknown provider: ${chosen}`);
       return false;
     } catch (error: any) {
       // Log the complete error object for debugging

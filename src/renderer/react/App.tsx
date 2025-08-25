@@ -7,6 +7,8 @@ const MCPPanel = React.lazy(() => import("./components/MCPPanel"));
 import LoadingScreen from "./components/LoadingScreen";
 import { Message, AppSettings } from "./types";
 import { useElectron } from "./hooks/useElectron";
+import RealtimeDebugOverlay from "./components/RealtimeDebugOverlay";
+import ProgressPane from "./components/ProgressPane";
 
 const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -16,12 +18,16 @@ const App: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isMCPPanelOpen, setIsMCPPanelOpen] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [typingStep, setTypingStep] = useState<string | undefined>(undefined);
+  const [typingState, setTypingState] = useState<string | undefined>(undefined);
   const [pendingNotice, setPendingNotice] = useState<string | null>(null);
   const [settings, setSettings] = useState<AppSettings>({
     aiProvider: "gemini",
     voiceEnabled: false,
     debugMode: false,
     theme: "dark",
+    micBoost: 2,
+    vadSensitivity: "medium",
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -39,6 +45,201 @@ const App: React.FC = () => {
     initializeApp();
   }, []);
 
+  // Progress updates from main
+  useEffect(() => {
+    if (!isElectronAvailable || !window?.electronAPI?.chat?.onProgress) return;
+    const off = window.electronAPI.chat.onProgress((payload) => {
+      try {
+        if (!payload) return;
+        setTypingStep(payload.step);
+        setTypingState(payload.state);
+        if (payload.state === "done" || payload.state === "error") {
+          setTimeout(() => {
+            setTypingStep(undefined);
+            setTypingState(undefined);
+          }, 800);
+        }
+
+        // Mirror select progress steps into the chat as compact assistant messages
+        const formatPreview = (v: any, max = 200) => {
+          try {
+            const s = typeof v === "string" ? v : JSON.stringify(v);
+            return s.length > max ? s.slice(0, max) + "…" : s;
+          } catch {
+            return String(v);
+          }
+        };
+
+        const toChatLine = (e: {
+          step: string;
+          state: "start" | "done" | "error";
+          info?: any;
+          ts: number;
+          opId?: string;
+        }): string | null => {
+          const { step, state, info } = e;
+          const stateTag =
+            state === "start" ? "…" : state === "done" ? "✓" : "✗";
+          // Prefer concise, human-friendly lines per step
+          switch (step) {
+            case "mcp-connect":
+              return `MCP connect ${stateTag}`;
+            case "refresh-schemas":
+              return `Refresh AMPP schemas ${stateTag}`;
+            case "tools-call": {
+              const name = info?.tool || info?.name || "tool";
+              const ar = info?.args ? formatPreview(info.args, 140) : undefined;
+              return ar
+                ? `Tool ${name} ${stateTag} args=${ar}`
+                : `Tool ${name} ${stateTag}`;
+            }
+            case "param-scan": {
+              const p = info?.param || info?.target || info?.query;
+              const app = info?.app || info?.application;
+              return `Scan parameters for ${app || "app"} "${
+                p || ""
+              }" ${stateTag}`;
+            }
+            case "param-candidates": {
+              const cmds = Array.isArray(info?.commands) ? info.commands : [];
+              return cmds.length
+                ? `Candidate commands (${cmds.length}): ${formatPreview(
+                    cmds,
+                    140
+                  )} ${stateTag}`
+                : `Candidate commands ${stateTag}`;
+            }
+            case "param-scan-cmd": {
+              const idx = info?.index ?? info?.i;
+              const total = info?.total ?? info?.n;
+              const cmd = info?.command || info?.cmd;
+              const params = Array.isArray(info?.params)
+                ? info.params.slice(0, 6)
+                : undefined;
+              const suffix = params
+                ? ` params=${formatPreview(params, 120)}`
+                : "";
+              return `Scan ${
+                cmd || "command"
+              } (${idx}/${total}) ${stateTag}${suffix}`;
+            }
+            case "param-matches": {
+              const matches = Array.isArray(info?.matches) ? info.matches : [];
+              return matches.length
+                ? `Matched parameters: ${formatPreview(
+                    matches,
+                    160
+                  )} ${stateTag}`
+                : `No parameter matches ${stateTag}`;
+            }
+            case "param-suggestions": {
+              const sug = Array.isArray(info?.suggestions)
+                ? info.suggestions.slice(0, 8)
+                : [];
+              return sug.length
+                ? `Closest parameters: ${formatPreview(sug, 160)} ${stateTag}`
+                : `No close parameters found ${stateTag}`;
+            }
+            case "param-chosen": {
+              const cmd = info?.command || info?.cmd;
+              const key = info?.paramKey || info?.key;
+              return `Chosen ${cmd || "command"} param ${
+                key || "?"
+              } ${stateTag}`;
+            }
+            case "payload-suggest":
+              return `Suggesting payload ${stateTag}`;
+            case "payload-override": {
+              const key = info?.key || info?.paramKey;
+              const val = info?.value ?? info?.to;
+              return `Set ${key || "param"} = ${formatPreview(
+                val,
+                120
+              )} ${stateTag}`;
+            }
+            case "invoke-args": {
+              const app = info?.application || info?.app;
+              const cmd = info?.command || info?.cmd;
+              const wl = info?.workload || info?.workloadName || info?.name;
+              const payloadObj = info?.payload || {};
+              const json = (() => {
+                try {
+                  return JSON.stringify(payloadObj);
+                } catch {
+                  return String(payloadObj);
+                }
+              })();
+              return `Invoke ${app || "App"}.${cmd || "cmd"} for "${
+                wl || "?"
+              }" payload=${json} ${stateTag}`;
+            }
+            case "invoke-attempt": {
+              const attempt = info?.attempt || info?.try || 1;
+              const reason = info?.reason
+                ? ` reason=${formatPreview(info.reason, 120)}`
+                : "";
+              return `Invoke attempt ${attempt} ${stateTag}${reason}`;
+            }
+            case "invoke-retry": {
+              const reason = info?.reason
+                ? ` (${formatPreview(info.reason, 140)})`
+                : "";
+              return `Retry invoke${reason} ${stateTag}`;
+            }
+            case "guidance": {
+              const text = info?.text || info;
+              return typeof text === "string" ? text : formatPreview(text, 180);
+            }
+            default:
+              return null;
+          }
+        };
+
+        const line = toChatLine(payload);
+        if (line) {
+          const assistantMessage: Message = {
+            id: (Date.now() + Math.random()).toString(),
+            content: line,
+            sender: "assistant",
+            timestamp: new Date(),
+            type: "text",
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+        }
+      } catch {}
+    });
+    return () => {
+      try {
+        if (typeof off === "function") off();
+      } catch {}
+    };
+  }, [isElectronAvailable]);
+
+  // Listen for assistant messages that come from main (e.g., Realtime transcript pipeline)
+  useEffect(() => {
+    if (!isElectronAvailable || !window.electronAPI?.chat?.onAssistantMessage)
+      return;
+    const off = window.electronAPI.chat.onAssistantMessage(
+      ({ content, source }) => {
+        if (!content) return;
+        const assistantMessage: Message = {
+          id: (Date.now() + Math.random()).toString(),
+          content,
+          sender: "assistant",
+          timestamp: new Date(),
+          type: "text",
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+        // Don't speak here; realtime pipeline already plays audio
+      }
+    );
+    return () => {
+      try {
+        if (typeof off === "function") off();
+      } catch {}
+    };
+  }, [isElectronAvailable]);
+
   useEffect(() => {
     // Auto scroll to bottom when new messages arrive
     scrollToBottom();
@@ -50,7 +251,7 @@ const App: React.FC = () => {
       return;
     const off = window.electronAPI.mcp.onServersUpdated(
       async ({ serverId, status }) => {
-        if (serverId !== "clipplayer") return;
+        if (serverId !== "ampp") return;
         if (status === "connected") {
           // Show a brief system message that schemas are bootstrapping
           const msgId = `sys_${Date.now()}`;
@@ -80,7 +281,7 @@ const App: React.FC = () => {
           }, 20000);
           // Proactively ask main to list tools to detect when loading completes
           try {
-            await window.electronAPI.mcp.listTools("clipplayer");
+            await window.electronAPI.mcp.listTools("ampp");
           } catch {}
           // Replace the notice with a confirmation line
           setMessages((prev) =>
@@ -204,19 +405,7 @@ const App: React.FC = () => {
 
       setMessages((prev) => [...prev, assistantMessage]);
 
-      // Simple TTS: speak the assistant response if voice is enabled
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        try {
-          const utter = new SpeechSynthesisUtterance(response);
-          utter.rate = 1.0;
-          utter.pitch = 1.0;
-          utter.onstart = () => {
-            // If user starts talking, cancel in MessageInput
-          };
-          window.speechSynthesis.cancel();
-          window.speechSynthesis.speak(utter);
-        } catch {}
-      }
+      // No local TTS for standard chat replies; only Realtime bot should produce audio.
     } catch (error) {
       console.error("Failed to get AI response:", error);
       const errorMessage: Message = {
@@ -299,12 +488,16 @@ const App: React.FC = () => {
         <ChatContainer
           messages={messages}
           isTyping={isTyping}
+          typingStep={typingStep}
+          typingState={typingState}
           messagesEndRef={messagesEndRef}
         />
 
         <MessageInput
           onSendMessage={handleSendMessage}
           disabled={!isConnected}
+          micBoost={settings.micBoost}
+          vadSensitivity={settings.vadSensitivity}
         />
       </main>
 
@@ -318,6 +511,13 @@ const App: React.FC = () => {
         )}
         {isMCPPanelOpen && <MCPPanel onClose={handleMCPToggle} />}
       </Suspense>
+
+      {settings.debugMode && (
+        <>
+          <RealtimeDebugOverlay />
+          <ProgressPane />
+        </>
+      )}
     </div>
   );
 };

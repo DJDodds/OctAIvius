@@ -9,13 +9,18 @@ import SendIcon from "../assets/icons/send.svg";
 interface MessageInputProps {
   onSendMessage: (message: string, type?: "text" | "voice") => void;
   disabled?: boolean;
+  micBoost?: number | undefined;
+  vadSensitivity?: "low" | "medium" | "high" | undefined;
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({
   onSendMessage,
   disabled = false,
+  micBoost = 2,
+  vadSensitivity = "medium",
 }) => {
   const [message, setMessage] = useState("");
+  // Simplify UI: disable local STT path; only keep Live button
   const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -23,6 +28,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [toolCache, setToolCache] = useState<Record<string, any[]>>({});
   const [loadingTools, setLoadingTools] = useState(false);
+  // Simple client-side history for sent messages
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number | null>(null);
+  const draftRef = useRef<string>("");
   const {
     isElectronAvailable,
     startVoiceRecording: startElectronRecording,
@@ -31,7 +40,39 @@ const MessageInput: React.FC<MessageInputProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
-  const realtime = useOpenAIRealtime();
+  const realtime = useOpenAIRealtime({ micBoost, vadSensitivity });
+
+  useEffect(() => {
+    // Mirror minimal state to console for file capture
+    const id = setInterval(() => {
+      try {
+        console.log(
+          `[realtime:ui] c=${realtime.connected} s=${realtime.isStreaming} a=${
+            realtime.isAwaiting
+          } p=${realtime.isSpeaking} vu=${realtime.vu.toFixed(2)}`
+        );
+      } catch {}
+    }, 2000);
+    return () => clearInterval(id);
+  }, [realtime]);
+
+  // Load saved history on mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("chat.history");
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr))
+          setHistory(arr.filter((s) => typeof s === "string"));
+      }
+    } catch {}
+  }, []);
+
+  const persistHistory = (items: string[]) => {
+    try {
+      localStorage.setItem("chat.history", JSON.stringify(items.slice(-200)));
+    } catch {}
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +87,17 @@ const MessageInput: React.FC<MessageInputProps> = ({
     }
     if (message.trim() && !disabled) {
       onSendMessage(message.trim());
+      // Push to history (dedupe adjacent)
+      setHistory((prev) => {
+        const next =
+          prev[prev.length - 1] === message.trim()
+            ? prev
+            : [...prev, message.trim()];
+        persistHistory(next);
+        return next;
+      });
+      setHistoryIndex(null);
+      draftRef.current = "";
       setMessage("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -75,6 +127,51 @@ const MessageInput: React.FC<MessageInputProps> = ({
             Math.max(0, Math.min(selectedIndex, suggestions.length - 1))
           ];
         if (sel) applySuggestion(sel);
+        return;
+      }
+    }
+
+    // Up/Down history navigation when not using suggestions
+    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      const ta = textareaRef.current;
+      const caretAtStart = ta
+        ? ta.selectionStart === 0 && ta.selectionEnd === 0
+        : false;
+      const caretAtEnd = ta
+        ? ta.selectionStart === message.length &&
+          ta.selectionEnd === message.length
+        : false;
+      const isArrowUp = e.key === "ArrowUp";
+
+      // Only trigger history when input is empty or caret at the respective boundary
+      if (
+        (isArrowUp && (message.length === 0 || caretAtStart)) ||
+        (!isArrowUp && historyIndex !== null)
+      ) {
+        e.preventDefault();
+        setHistoryIndex((idx) => {
+          let nextIdx: number | null = idx;
+          if (idx === null) {
+            // Entering history browsing: store current draft
+            draftRef.current = message;
+            nextIdx = history.length - 1;
+          } else {
+            if (isArrowUp) nextIdx = Math.max(0, idx - 1);
+            else nextIdx = idx + 1;
+            if (nextIdx >= history.length) nextIdx = null; // exit history to draft/empty
+          }
+          const nextMessage =
+            nextIdx === null ? draftRef.current : history[nextIdx] ?? "";
+          setMessage(nextMessage);
+          requestAnimationFrame(() => {
+            if (textareaRef.current) {
+              const el = textareaRef.current;
+              el.selectionStart = el.selectionEnd = nextMessage.length;
+              el.style.height = "auto";
+            }
+          });
+          return nextIdx;
+        });
         return;
       }
     }
@@ -233,24 +330,9 @@ const MessageInput: React.FC<MessageInputProps> = ({
     setIsRecording(false);
   };
 
+  // Disable local STT mic button behavior (Live covers the voice use case)
   const handleVoiceRecord = async () => {
-    if (!isRecording) {
-      // Start recording
-      try {
-        setIsRecording(true);
-        await startLocalRecording();
-      } catch (error) {
-        console.error("Failed to start recording:", error);
-        setIsRecording(false);
-      }
-    } else {
-      // Stop recording
-      try {
-        await stopLocalRecording();
-      } catch (error) {
-        console.error("Failed to stop recording:", error);
-      }
-    }
+    /* disabled */
   };
 
   const adjustTextareaHeight = () => {
@@ -262,7 +344,7 @@ const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="message-input-container">
-      {realtime.connected && (realtime.isStreaming || realtime.isAwaiting) && realtime.liveTranscript && (
+      {realtime.connected && (
         <div
           style={{
             position: "absolute",
@@ -279,10 +361,27 @@ const MessageInput: React.FC<MessageInputProps> = ({
             overflow: "hidden",
             textOverflow: "ellipsis",
             pointerEvents: "none",
+            zIndex: 1000,
           }}
-          title={realtime.liveTranscript}
+          title={
+            realtime.liveTranscript ||
+            (realtime.isSpeaking
+              ? "Speaking…"
+              : realtime.isAwaiting
+              ? "Thinking…"
+              : realtime.isStreaming
+              ? "Listening…"
+              : "Live")
+          }
         >
-          {realtime.liveTranscript}
+          {realtime.liveTranscript ||
+            (realtime.isSpeaking
+              ? "Speaking…"
+              : realtime.isAwaiting
+              ? "Thinking…"
+              : realtime.isStreaming
+              ? "Listening…"
+              : "Live")}
         </div>
       )}
       <form onSubmit={handleSubmit} className="message-form">
@@ -371,53 +470,29 @@ const MessageInput: React.FC<MessageInputProps> = ({
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={handleVoiceRecord}
-            className={`voice-record-btn ${isRecording ? "recording" : ""}`}
-            disabled={disabled}
-            title={
-              isRecording
-                ? "Stop local STT recording"
-                : "Start local STT recording"
-            }
-          >
-            <img
-              src={isRecording ? StopIcon : MicIcon}
-              alt={isRecording ? "Stop STT" : "STT Mic"}
-              width={20}
-              height={20}
-            />
-            <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.8 }}>
-              STT
-            </span>
-          </button>
+          {/* Local STT button removed to keep only the Live flow */}
 
           {/* Realtime Live button (OpenAI Realtime speech-to-speech) */}
           <button
             type="button"
             onClick={async () => {
               try {
+                // Simple on/off toggle:
+                // - If OFF: connect and let hook auto-arm mic
+                // - If ON: fully stop session, mic, and playback
                 if (!realtime.connected) {
-                  const res = await realtime.start({ voice: "verse" });
-                  // startMic only after we see connected state flip via event
-                  setTimeout(() => {
-                    if (realtime.connected) void realtime.startMic();
-                  }, 50);
+                  await realtime.start({ voice: "verse" });
                 } else {
-                  // Stop mic, commit buffer, and stop session
-                  realtime.stopMic();
-                  await realtime.commit();
                   await realtime.stop();
                 }
               } catch (e) {
-                console.error("Realtime start/stop failed", e);
+                console.error("Realtime toggle failed", e);
               }
             }}
             className={`voice-record-btn ${
               realtime.connected ? "recording" : ""
             }`}
-            disabled={disabled}
+            disabled={false}
             title={
               !realtime.connected
                 ? "Start Realtime streaming"
@@ -448,19 +523,13 @@ const MessageInput: React.FC<MessageInputProps> = ({
               height={20}
             />
             <span style={{ marginLeft: 6, fontSize: 10, opacity: 0.85 }}>
-              {!realtime.connected
-                ? "Live"
-                : realtime.isSpeaking
-                ? "Speaking"
-                : realtime.isAwaiting
-                ? "Thinking"
-                : realtime.isStreaming
-                ? "Listening"
-                : "Live"}
+              {!realtime.connected ? "Live" : "Stop"}
             </span>
             {realtime.connected && (
               <div
-                title={`Input level: ${(Math.min(1, Math.max(0, realtime.vu)) * 100).toFixed(0)}%`}
+                title={`Input level: ${(
+                  Math.min(1, Math.max(0, realtime.vu)) * 100
+                ).toFixed(0)}%`}
                 aria-label="Realtime input level"
                 style={{
                   marginLeft: 8,
@@ -474,7 +543,10 @@ const MessageInput: React.FC<MessageInputProps> = ({
               >
                 <div
                   style={{
-                    width: `${Math.min(100, Math.round((realtime.vu || 0) * 200))}%`,
+                    width: `${Math.min(
+                      100,
+                      Math.round((realtime.vu || 0) * 200)
+                    )}%`,
                     height: "100%",
                     background: realtime.voiceActive ? "#22c55e" : "#888",
                     transition: "width 50ms linear, background 120ms ease",

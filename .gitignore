@@ -2,3 +2,9 @@ node_modules
 dist
 .vscode/settings.json
 .env
+release
+logs
+examples
+logs/app.error.log
+logs/app.log
+logs/app.error.log

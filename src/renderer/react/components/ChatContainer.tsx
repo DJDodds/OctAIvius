@@ -6,12 +6,16 @@ import TypingIndicator from "./TypingIndicator";
 interface ChatContainerProps {
   messages: Message[];
   isTyping: boolean;
+  typingStep?: string | undefined;
+  typingState?: string | undefined;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
   messages,
   isTyping,
+  typingStep,
+  typingState,
   messagesEndRef,
 }) => {
   return (
@@ -30,7 +34,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
             {messages.map((message) => (
               <MessageBubble key={message.id} message={message} />
             ))}
-            {isTyping && <TypingIndicator />}
+            {isTyping && (
+              <TypingIndicator step={typingStep} state={typingState} />
+            )}
           </>
         )}
         <div ref={messagesEndRef} />
