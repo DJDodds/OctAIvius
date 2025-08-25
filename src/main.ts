@@ -433,9 +433,10 @@ class GVAIBotApp {
           };
           progress("tools-call", "start", infoBrief);
           if (isInvoke) progress("invoke", "start", infoBrief);
-          progress("mcp-connect", "start");
+          const wasConnected = mcpService.isServerConnected(serverId);
+          if (!wasConnected) progress("mcp-connect", "start");
           await ensureServer(serverId);
-          progress("mcp-connect", "done");
+          if (!wasConnected) progress("mcp-connect", "done");
           if (isInvoke) {
             // Emit preview of invoke args
             try {
@@ -1538,9 +1539,10 @@ class GVAIBotApp {
           logger.info("🧩 NL route -> ampp_list_all_workloads");
           return await call("ampp_list_all_workloads", {});
         }
-        // List application types
+        // List application types (aka application names)
         if (
-          (m = message.match(/(?:list|show)\s+(?:all\s+)?application types/i))
+          (m = message.match(/(?:list|show)\s+(?:all\s+)?application\s+(?:types|names)/i)) ||
+          /^(?:what\s+are\s+)?the\s+applications\s*(?:\?|$)/i.test(message)
         ) {
           logger.info("🧩 NL route -> ampp_list_application_types");
           return await call("ampp_list_application_types", {});
